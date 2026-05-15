@@ -1,0 +1,562 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .doc { max-width: 660px; padding: 2rem 0; }
+  .cover { border-bottom: 0.5px solid var(--color-border-tertiary); padding-bottom: 2rem; margin-bottom: 2rem; }
+  .cover-tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: .5rem; }
+  .cover-title { font-size: 26px; font-weight: 500; color: var(--color-text-primary); line-height: 1.25; }
+  .cover-sub { font-size: 14px; color: var(--color-text-secondary); margin-top: .5rem; }
+  .cover-meta { display: flex; gap: 20px; margin-top: 1.25rem; flex-wrap: wrap; }
+  .meta-pill { font-size: 12px; padding: 4px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); }
+
+  .section { margin-bottom: 2.5rem; }
+  .section-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: .75rem; }
+  .section-title { font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem; }
+
+  /* Architecture */
+  .arch-layer { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: .75rem; position: relative; }
+  .arch-layer-tag { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: .25rem; }
+  .arch-layer-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: .5rem; }
+  .arch-nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .arch-node { font-size: 12px; padding: 3px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); background: var(--color-background-secondary); }
+  .arch-arrow { text-align: center; color: var(--color-text-tertiary); font-size: 18px; margin: .25rem 0; line-height: 1; }
+
+  /* Flow */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; gap: 16px; align-items: flex-start; }
+  .flow-line { display: flex; flex-direction: column; align-items: center; }
+  .flow-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-text-tertiary); flex-shrink: 0; margin-top: 4px; }
+  .flow-connector { width: 1px; flex: 1; background: var(--color-border-tertiary); min-height: 24px; margin: 4px 0; }
+  .flow-body { padding-bottom: 1rem; flex: 1; }
+  .flow-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+  .flow-desc { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.6; }
+  .flow-code { font-family: var(--font-mono); font-size: 12px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 14px; margin-top: 8px; color: var(--color-text-secondary); line-height: 1.7; }
+  .flow-step:last-child .flow-connector { display: none; }
+
+  /* Phases */
+  .phase { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; margin-bottom: 1rem; }
+  .phase-header { padding: .75rem 1.25rem; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .phase-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: var(--border-radius-md); }
+  .phase-badge.p1 { background: var(--color-background-success); color: var(--color-text-success); }
+  .phase-badge.p2 { background: var(--color-background-info); color: var(--color-text-info); }
+  .phase-badge.p3 { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .phase-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+  .phase-time { font-size: 12px; color: var(--color-text-tertiary); }
+  .phase-body { padding: 1rem 1.25rem; }
+  .phase-items { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .phase-items li { font-size: 13px; color: var(--color-text-secondary); display: flex; gap: 10px; line-height: 1.5; }
+  .phase-items li::before { content: "—"; color: var(--color-text-tertiary); flex-shrink: 0; }
+
+  /* DB Tables */
+  .db-table { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; margin-bottom: .75rem; }
+  .db-table-header { padding: .6rem 1rem; background: var(--color-background-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 13px; font-weight: 500; color: var(--color-text-primary); display: flex; align-items: center; gap: 8px; }
+  .db-table-header i { font-size: 15px; color: var(--color-text-tertiary); }
+  .db-field { padding: .45rem 1rem; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .db-field:last-child { border-bottom: none; }
+  .db-field-name { font-family: var(--font-mono); color: var(--color-text-primary); min-width: 160px; }
+  .db-field-type { color: var(--color-text-tertiary); flex: 1; }
+  .db-field-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-tertiary); }
+  .db-field-badge.pk { background: var(--color-background-warning); border-color: transparent; color: var(--color-text-warning); }
+  .db-field-badge.fk { background: var(--color-background-info); border-color: transparent; color: var(--color-text-info); }
+
+  /* Stack table */
+  .stack-row { display: flex; align-items: center; gap: 12px; padding: .6rem 0; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 13px; }
+  .stack-row:last-child { border-bottom: none; }
+  .stack-need { color: var(--color-text-secondary); width: 160px; flex-shrink: 0; }
+  .stack-tool { color: var(--color-text-primary); font-weight: 500; flex: 1; }
+  .stack-why { color: var(--color-text-tertiary); font-size: 12px; }
+
+  /* Revenue */
+  .rev-calc { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1.25rem; }
+  .rev-row { display: flex; justify-content: space-between; font-size: 13px; padding: .35rem 0; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); }
+  .rev-row:last-child { border-bottom: none; font-weight: 500; color: var(--color-text-primary); font-size: 14px; }
+  .rev-val { font-family: var(--font-mono); }
+
+  /* Nav tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; flex-wrap: wrap; border-bottom: 0.5px solid var(--color-border-tertiary); padding-bottom: .75rem; }
+  .tab { font-size: 13px; padding: 5px 14px; border-radius: var(--border-radius-md); border: 0.5px solid transparent; cursor: pointer; color: var(--color-text-secondary); background: transparent; }
+  .tab.active { background: var(--color-background-secondary); border-color: var(--color-border-tertiary); color: var(--color-text-primary); font-weight: 500; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 2rem 0; }
+  .note { font-size: 12px; color: var(--color-text-tertiary); margin-top: .5rem; line-height: 1.6; }
+</style>
+
+<div class="doc">
+  <div class="cover">
+    <div class="cover-tag">Product document · v1.0</div>
+    <div class="cover-title">Ilorin Smart Transport Platform</div>
+    <div class="cover-sub">Backend architecture, payment system design, and phased product roadmap</div>
+    <div class="cover-meta">
+      <span class="meta-pill"><i class="ti ti-map-pin" aria-hidden="true"></i> Ilorin, Kwara State</span>
+      <span class="meta-pill"><i class="ti ti-device-mobile" aria-hidden="true"></i> Keke NAPEP → BRT</span>
+      <span class="meta-pill"><i class="ti ti-currency-naira" aria-hidden="true"></i> Moniepoint-bridged</span>
+      <span class="meta-pill"><i class="ti ti-code" aria-hidden="true"></i> Go · PostgreSQL · Flutter</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('architecture')">Architecture</button>
+    <button class="tab" onclick="showTab('database')">Database</button>
+    <button class="tab" onclick="showTab('payment')">Payment flow</button>
+    <button class="tab" onclick="showTab('roadmap')">Roadmap</button>
+    <button class="tab" onclick="showTab('stack')">Tech stack</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="section">
+      <div class="section-label">What we're building</div>
+      <div class="section-title">A cashless transport platform for Ilorin</div>
+      <p style="font-size:14px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:1rem;">
+        One app that serves both passengers and drivers. Passengers link their bank accounts and tap to pay. Drivers receive money instantly to any Nigerian bank or wallet. The platform earns a small fee per transaction. No money is held — it flows directly from passenger to driver via Moniepoint's infrastructure.
+      </p>
+      <p style="font-size:14px;color:var(--color-text-secondary);line-height:1.7;">
+        Starting with Keke NAPEP on Ilorin's busiest corridors, expanding to BRT when the city is ready.
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Core principles</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Zero money held</div>
+            <div class="flow-desc">The platform is a routing layer, not a wallet. Money moves directly from passenger's bank to driver's account. No CBN stored-value license required at this stage.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">One bridge — Moniepoint</div>
+            <div class="flow-desc">A single API handles both collection (from passenger's linked bank) and disbursement (to driver's any-bank account). One integration, every Nigerian account reachable via NIP rails.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Multi-account fallback</div>
+            <div class="flow-desc">Passengers link multiple accounts with a priority order. If the primary account has insufficient funds, the next account is tried automatically. A seamless tap, always.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Same app, two roles</div>
+            <div class="flow-desc">Passengers and drivers use the same Flutter app. Role is determined at registration. The UI surfaces different screens but the underlying auth and data model are unified.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Revenue model</div>
+      <div class="rev-calc">
+        <div class="rev-row"><span>Fare per trip (Keke)</span><span class="rev-val">₦200</span></div>
+        <div class="rev-row"><span>Platform fee (5%)</span><span class="rev-val">₦10</span></div>
+        <div class="rev-row"><span>Driver receives</span><span class="rev-val">₦190</span></div>
+        <div class="rev-row"><span>Moniepoint fee (est.)</span><span class="rev-val">~₦3–5</span></div>
+        <div class="rev-row"><span>Net per trip</span><span class="rev-val">~₦5–7</span></div>
+        <hr style="border:none;border-top:0.5px solid var(--color-border-tertiary);margin:.5rem 0">
+        <div class="rev-row"><span>At 10,000 trips/day</span><span class="rev-val">~₦50,000–70,000/day</span></div>
+        <div class="rev-row"><span>Monthly (Keke only)</span><span class="rev-val">~₦1.5M–2.1M</span></div>
+      </div>
+      <div class="note">Scales linearly. Add BRT, minibuses, and intercity routes and the model multiplies without rebuilding anything.</div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="tab-panel" id="tab-architecture">
+    <div class="section">
+      <div class="section-label">System layers</div>
+      <div class="section-title">Four-layer architecture</div>
+
+      <div class="arch-layer" style="border-color:var(--color-border-info)">
+        <div class="arch-layer-tag">Layer 4 — Passenger & driver facing</div>
+        <div class="arch-layer-name">Flutter app (one app, two roles)</div>
+        <div class="arch-nodes">
+          <span class="arch-node">Passenger view</span>
+          <span class="arch-node">Driver view</span>
+          <span class="arch-node">Trip history</span>
+          <span class="arch-node">Account linking</span>
+          <span class="arch-node">Notifications</span>
+          <span class="arch-node">Earnings dashboard</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+
+      <div class="arch-layer" style="border-color:var(--color-border-success)">
+        <div class="arch-layer-tag">Layer 3 — Go REST API (your core backend)</div>
+        <div class="arch-layer-name">Transaction engine + routing logic</div>
+        <div class="arch-nodes">
+          <span class="arch-node">POST /tap</span>
+          <span class="arch-node">POST /topup</span>
+          <span class="arch-node">GET /balance</span>
+          <span class="arch-node">POST /register</span>
+          <span class="arch-node">GET /trips</span>
+          <span class="arch-node">POST /link-account</span>
+          <span class="arch-node">Fallback chain logic</span>
+          <span class="arch-node">Fee calculation</span>
+          <span class="arch-node">Webhook handler</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+
+      <div class="arch-layer" style="border-color:var(--color-border-warning)">
+        <div class="arch-layer-tag">Layer 2 — Moniepoint API (the bridge)</div>
+        <div class="arch-layer-name">Collection + disbursement via NIP rails</div>
+        <div class="arch-nodes">
+          <span class="arch-node">A2A debit (passenger)</span>
+          <span class="arch-node">Instant payout (driver)</span>
+          <span class="arch-node">Virtual account creation</span>
+          <span class="arch-node">Webhook events</span>
+          <span class="arch-node">Settlement records</span>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-tag">Layer 1 — Data + hardware</div>
+        <div class="arch-layer-name">PostgreSQL + NFC scanner on Keke</div>
+        <div class="arch-nodes">
+          <span class="arch-node">PostgreSQL database</span>
+          <span class="arch-node">NFC reader (PN532)</span>
+          <span class="arch-node">GSM SIM (data)</span>
+          <span class="arch-node">GPS tracker</span>
+          <span class="arch-node">ESP32 / RPi Zero firmware</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Key backend decisions</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Go for the API</div>
+            <div class="flow-desc">Handles concurrent tap requests with low latency. Compiles to a single binary. Easy to deploy on a cheap VPS. Aligns with what you're already learning.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">PostgreSQL transactions for safety</div>
+            <div class="flow-desc">Every tap runs inside a DB transaction. If Moniepoint fails to pay the driver, the passenger's balance is rolled back automatically. No money is lost.</div>
+            <div class="flow-code">BEGIN TRANSACTION<br>  deduct passenger balance<br>  call Moniepoint API<br>  if success → COMMIT + log trip<br>  if fail   → ROLLBACK (balance restored)<br>END</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Idempotency on every payout</div>
+            <div class="flow-desc">Every Moniepoint API call includes a unique reference (trip_id + timestamp). If a network glitch triggers a retry, Moniepoint detects the duplicate and pays only once.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATABASE -->
+  <div class="tab-panel" id="tab-database">
+    <div class="section">
+      <div class="section-label">Core tables</div>
+      <div class="section-title">PostgreSQL schema</div>
+
+      <div class="db-table">
+        <div class="db-table-header"><i class="ti ti-users" aria-hidden="true"></i> users</div>
+        <div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">uuid</span><span class="db-field-badge pk">PK</span></div>
+        <div class="db-field"><span class="db-field-name">phone</span><span class="db-field-type">varchar(15) unique not null</span></div>
+        <div class="db-field"><span class="db-field-name">full_name</span><span class="db-field-type">varchar(100)</span></div>
+        <div class="db-field"><span class="db-field-name">role</span><span class="db-field-type">enum('passenger','driver')</span></div>
+        <div class="db-field"><span class="db-field-name">moniepoint_customer_id</span><span class="db-field-type">varchar(100)</span></div>
+        <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">timestamptz default now()</span></div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header"><i class="ti ti-credit-card" aria-hidden="true"></i> passenger_accounts</div>
+        <div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">uuid</span><span class="db-field-badge pk">PK</span></div>
+        <div class="db-field"><span class="db-field-name">passenger_id</span><span class="db-field-type">uuid → users.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">account_number</span><span class="db-field-type">varchar(20)</span></div>
+        <div class="db-field"><span class="db-field-name">bank_code</span><span class="db-field-type">varchar(10)</span></div>
+        <div class="db-field"><span class="db-field-name">bank_name</span><span class="db-field-type">varchar(60)</span></div>
+        <div class="db-field"><span class="db-field-name">priority_order</span><span class="db-field-type">int — lower = tried first</span></div>
+        <div class="db-field"><span class="db-field-name">is_active</span><span class="db-field-type">boolean default true</span></div>
+        <div class="db-field"><span class="db-field-name">linked_at</span><span class="db-field-type">timestamptz</span></div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header"><i class="ti ti-device-mobile" aria-hidden="true"></i> terminals</div>
+        <div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">uuid</span><span class="db-field-badge pk">PK</span></div>
+        <div class="db-field"><span class="db-field-name">driver_id</span><span class="db-field-type">uuid → users.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">device_serial</span><span class="db-field-type">varchar(64) unique</span></div>
+        <div class="db-field"><span class="db-field-name">vehicle_plate</span><span class="db-field-type">varchar(20)</span></div>
+        <div class="db-field"><span class="db-field-name">terminal_type</span><span class="db-field-type">enum('keke','bus','ferry')</span></div>
+        <div class="db-field"><span class="db-field-name">is_active</span><span class="db-field-type">boolean default true</span></div>
+        <div class="db-field"><span class="db-field-name">registered_at</span><span class="db-field-type">timestamptz</span></div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header"><i class="ti ti-route" aria-hidden="true"></i> trips</div>
+        <div class="db-field"><span class="db-field-name">id</span><span class="db-field-type">uuid</span><span class="db-field-badge pk">PK</span></div>
+        <div class="db-field"><span class="db-field-name">passenger_id</span><span class="db-field-type">uuid → users.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">driver_id</span><span class="db-field-type">uuid → users.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">terminal_id</span><span class="db-field-type">uuid → terminals.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">fare_amount</span><span class="db-field-type">numeric(10,2)</span></div>
+        <div class="db-field"><span class="db-field-name">driver_payout</span><span class="db-field-type">numeric(10,2)</span></div>
+        <div class="db-field"><span class="db-field-name">platform_fee</span><span class="db-field-type">numeric(10,2)</span></div>
+        <div class="db-field"><span class="db-field-name">account_used_id</span><span class="db-field-type">uuid → passenger_accounts.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">moniepoint_debit_ref</span><span class="db-field-type">varchar(100) unique</span></div>
+        <div class="db-field"><span class="db-field-name">moniepoint_credit_ref</span><span class="db-field-type">varchar(100) unique</span></div>
+        <div class="db-field"><span class="db-field-name">status</span><span class="db-field-type">enum('pending','success','failed','refunded')</span></div>
+        <div class="db-field"><span class="db-field-name">tapped_at</span><span class="db-field-type">timestamptz default now()</span></div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header"><i class="ti ti-bell" aria-hidden="true"></i> notifications</div>
+        <div class="db-field"><span class="db-field-name">id</span><span class="db-field-name">uuid</span><span class="db-field-badge pk">PK</span></div>
+        <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-type">uuid → users.id</span><span class="db-field-badge fk">FK</span></div>
+        <div class="db-field"><span class="db-field-name">message</span><span class="db-field-type">text</span></div>
+        <div class="db-field"><span class="db-field-name">is_read</span><span class="db-field-type">boolean default false</span></div>
+        <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">timestamptz default now()</span></div>
+      </div>
+
+      <div class="note">These five tables are the entire foundation. Analytics, reporting, and admin dashboards are queries built on top — no additional tables needed at MVP stage.</div>
+    </div>
+  </div>
+
+  <!-- PAYMENT FLOW -->
+  <div class="tab-panel" id="tab-payment">
+    <div class="section">
+      <div class="section-label">Transaction lifecycle</div>
+      <div class="section-title">What happens when a passenger taps</div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">1. Scanner tap</div>
+            <div class="flow-desc">NFC scanner on Keke reads passenger card. Sends HTTP POST to your Go API over GSM data.</div>
+            <div class="flow-code">POST /tap<br>{ "card_id": "ABC123", "terminal_id": "KEKE_001", "amount": 200 }</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">2. Identify & validate</div>
+            <div class="flow-desc">API looks up passenger from card_id. Looks up driver from terminal_id. Validates both accounts are active.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">3. Fallback chain</div>
+            <div class="flow-desc">API tries passenger's accounts in priority_order. Calls Moniepoint A2A debit on Account 1. If insufficient funds, tries Account 2. Continues until success or all accounts exhausted.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">4. Moniepoint executes</div>
+            <div class="flow-desc">Moniepoint debits passenger's bank (₦200) and credits driver's registered account (₦190) via NIP rails. Platform keeps ₦10. Settles in under 5 seconds.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#1D9E75"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">5. Commit & notify</div>
+            <div class="flow-desc">PostgreSQL transaction commits. Trip record written. Both passenger and driver receive instant push notification.</div>
+            <div class="flow-code">Passenger: "₦200 paid · Keke NAPEP · Tanke → Challenge"<br>Driver:    "₦190 received to your Access account"</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot" style="background:#E24B4A"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">On any failure — automatic rollback</div>
+            <div class="flow-desc">If Moniepoint fails at any point, the PostgreSQL transaction rolls back. Passenger's balance is untouched. No money lost. Scanner receives a "retry" response.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Multi-account fallback</div>
+      <div class="arch-layer">
+        <div class="arch-layer-tag">Passenger has 3 accounts linked</div>
+        <div class="arch-layer-name">Fallback logic (priority_order)</div>
+        <div class="arch-nodes" style="flex-direction:column;gap:6px;margin-top:.5rem;">
+          <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;">1. Try GTBank (priority 1) → ₦0 balance → skip</div>
+          <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;">2. Try OPay (priority 2) → ₦450 → sufficient → debit ₦200 ✓</div>
+          <div style="font-size:13px;color:var(--color-text-tertiary);line-height:1.6;">3. PalmPay (priority 3) → not reached</div>
+          <div style="font-size:13px;color:var(--color-text-secondary);margin-top:.5rem;line-height:1.6;">Driver sees: "Payment successful"<br>Passenger notified: "Paid from OPay · GTBank had insufficient funds"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div class="tab-panel" id="tab-roadmap">
+    <div class="section">
+      <div class="section-label">Product phases</div>
+      <div class="section-title">Three-phase roadmap</div>
+
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-badge p1">Phase 1</span>
+          <span class="phase-name">NFC tap-to-pay · Keke NAPEP pilot</span>
+          <span class="phase-time">Month 1–4</span>
+        </div>
+        <div class="phase-body">
+          <ul class="phase-items">
+            <li>Go REST API with /tap, /register, /link-account, /trips endpoints</li>
+            <li>PostgreSQL schema — users, passenger_accounts, terminals, trips, notifications</li>
+            <li>Moniepoint API integration — A2A collection and instant disbursement</li>
+            <li>NFC scanner hardware on 10–20 Keke (PN532 + SIM + GPS, ~₦20,000/unit)</li>
+            <li>Standard NFC card per passenger (₦500–1,000/card, no biometrics yet)</li>
+            <li>Multi-account fallback chain logic</li>
+            <li>Flutter app — passenger view (linked accounts, trip history) + driver view (earnings)</li>
+            <li>Push notifications on every transaction for both roles</li>
+            <li>Pilot route: Tanke ↔ Challenge corridor</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-badge p2">Phase 2</span>
+          <span class="phase-name">Scale + USSD + analytics</span>
+          <span class="phase-time">Month 5–9</span>
+        </div>
+        <div class="phase-body">
+          <ul class="phase-items">
+            <li>USSD integration via Africa's Talking — balance check, account linking for non-smartphone users</li>
+            <li>Expand to 5 major Ilorin corridors — Fate Road, Offa Garage, Kulende, Asa Dam</li>
+            <li>Real-time driver earnings dashboard with weekly and monthly analytics</li>
+            <li>Admin dashboard — live trip map, revenue per route, failed transaction monitoring</li>
+            <li>Onboard first Keke cooperative formally — union partnership, group scanner deployment</li>
+            <li>Apply for Tony Elumelu Foundation, GIZ, and World Bank MOBILIST grants</li>
+            <li>Approach Kwara State Ministry of Transport with pilot data</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-header">
+          <span class="phase-badge p3">Phase 3</span>
+          <span class="phase-name">Biometric · BRT · expansion</span>
+          <span class="phase-time">Month 10+</span>
+        </div>
+        <div class="phase-body">
+          <ul class="phase-items">
+            <li>Fingerprint biometric authentication — replace NFC card tap with finger press on scanner</li>
+            <li>Biometric enrollment infrastructure at BRT terminals and agent points</li>
+            <li>NDPR-compliant on-device fingerprint storage (template never leaves scanner chip)</li>
+            <li>BRT integration — same backend, new terminal_type, payout routes to company account</li>
+            <li>Route planning layer — OpenStreetMap + OSRM for passenger journey planning</li>
+            <li>Expand to other Kwara towns — Offa, Erin-Ile, Ajase-Ipo</li>
+            <li>Open platform API — let other transport operators integrate their vehicles</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Funding targets</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Phase 1 — Self-funded or friends & family</div>
+            <div class="flow-desc">₦300,000–500,000 covers 20 GPS scanners, SIM cards, NFC cards, and server costs for 6 months. Build the working pilot.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Phase 2 — Grant funding</div>
+            <div class="flow-desc">Tony Elumelu Foundation ($5,000), GIZ urban mobility grants, NITDA. Working pilot data is the application. Real trips, real revenue, real drivers.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Phase 3 — Institutional</div>
+            <div class="flow-desc">World Bank MOBILIST, IFC, Bank of Industry, Kwara State co-investment. Scale requires a partner with balance sheet. The Phase 1–2 data makes this conversation possible.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="tab-panel" id="tab-stack">
+    <div class="section">
+      <div class="section-label">Technology choices</div>
+      <div class="section-title">Full stack</div>
+
+      <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;margin-bottom:1.5rem;">
+        <div class="stack-row" style="padding:.6rem 1rem;background:var(--color-background-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-tertiary);">
+          <span style="width:160px;">Need</span><span style="flex:1;">Tool</span><span>Why</span>
+        </div>
+        <div style="padding:0 1rem;">
+          <div class="stack-row"><span class="stack-need">API backend</span><span class="stack-tool">Go</span><span class="stack-why">Fast, concurrent, you're learning it</span></div>
+          <div class="stack-row"><span class="stack-need">Database</span><span class="stack-tool">PostgreSQL</span><span class="stack-why">ACID transactions, reliable rollbacks</span></div>
+          <div class="stack-row"><span class="stack-need">Payment bridge</span><span class="stack-tool">Moniepoint API</span><span class="stack-why">A2A + disbursement, NIP rails, built for bottom of pyramid</span></div>
+          <div class="stack-row"><span class="stack-need">Mobile app</span><span class="stack-tool">Flutter</span><span class="stack-why">One codebase → Android + iOS</span></div>
+          <div class="stack-row"><span class="stack-need">USSD (Phase 2)</span><span class="stack-tool">Africa's Talking</span><span class="stack-why">Any phone, any network, Nigerian-friendly</span></div>
+          <div class="stack-row"><span class="stack-need">Scanner firmware</span><span class="stack-tool">MicroPython / ESP32</span><span class="stack-why">Cheap hardware, easy firmware updates</span></div>
+          <div class="stack-row"><span class="stack-need">NFC chip</span><span class="stack-tool">PN532 module</span><span class="stack-why">ISO 14443 compliant, widely available</span></div>
+          <div class="stack-row"><span class="stack-need">Maps & routing</span><span class="stack-tool">OpenStreetMap + OSRM</span><span class="stack-why">Free, works offline, Ilorin already mapped</span></div>
+          <div class="stack-row"><span class="stack-need">Analytics dashboard</span><span class="stack-tool">Metabase</span><span class="stack-why">Free, open source, connects to Postgres</span></div>
+          <div class="stack-row"><span class="stack-need">Push notifications</span><span class="stack-tool">Firebase Cloud Messaging</span><span class="stack-why">Free tier sufficient for pilot</span></div>
+          <div class="stack-row"><span class="stack-need">Server hosting</span><span class="stack-tool">DigitalOcean / Contabo</span><span class="stack-why">Cheap VPS, ~$5–10/month to start</span></div>
+        </div>
+      </div>
+
+      <div class="section-label">What to build first</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Week 1–2 · Wallet API in Go</div>
+            <div class="flow-desc">Build POST /tap with PostgreSQL. No Moniepoint yet — simulate the payment. Get the rollback logic working perfectly.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Week 3–4 · Moniepoint sandbox</div>
+            <div class="flow-desc">Create Moniepoint test account. Wire the disbursement API into /tap. Test real (fake) money flowing to a test driver account.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Week 5–6 · Scanner simulation</div>
+            <div class="flow-desc">Write a script that POSTs to /tap to simulate a scanner. Test the full flow end to end — tap → debit → payout → notification → log.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-line"><div class="flow-dot"></div></div>
+          <div class="flow-body">
+            <div class="flow-title">Week 7–8 · Flutter app MVP</div>
+            <div class="flow-desc">Passenger sees their linked accounts and trip history. Driver sees today's earnings. That's the entire MVP. Ship it.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
