@@ -207,42 +207,19 @@ func tapHandler(c *gin.Context) {
 
 // tripsHandler handles the GET /trips endpoint to retrieve all trips.
 func tripsHandler(c *gin.Context) {
-	var input struct {
-		ID          string    `json:"id"`
-		PassengerID string    `json:"passenger_id"`
-		DriverID    string    `json:"driver_id"`
-		TerminalID  string    `json:"terminal_id"`
-		FareAmount  float64   `json:"fare_amount"`
-		Status      string    `json:"status"`
-		TappedAt    time.Time `json:"tapped_at"`
-	}
-	// Bind the JSON input to the struct
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	// Check if the passenger exists
-	existingCount := 0
-	for _, passenger := range Passengers {
-		if passenger.PassengerID == input.PassengerID {
-			existingCount++
+	passengerID := c.Query("passenger_id")
+	driverID := c.Query("driver_id")
+
+	var result []Trip
+	for _, t := range Trips {
+		if (passengerID != "" && t.PassengerID == passengerID) ||
+			(driverID != "" && t.DriverID == driverID) {
+			result = append(result, t)
 		}
 	}
-	//create a new passenger and append to the Passengers slice
-	Tripcheck := Trip{
-		ID:          uuid.New().String(),
-		PassengerID: input.PassengerID,
-		DriverID:    input.DriverID,
-		TerminalID:  input.TerminalID,
-		FareAmount:  input.FareAmount,
-		Status:      input.Status,
-		TappedAt:    input.TappedAt,
-	}
-	//
-	Trips = append(Trips, Tripcheck)
-	c.JSON(http.StatusCreated, Tripcheck)
-}
 
+	c.JSON(http.StatusOK, result)
+}
 func TerminalHandler(c *gin.Context) {
 	var input struct {
 		ID           string    `json:"id"`
