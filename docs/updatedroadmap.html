@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transport Intelligence System — Master Build Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14; --bg-panel:#111721; --bg-code:#0A0D12;
+    --line:#1E2733; --line-bright:#2C3A4D;
+    --amber:#F2A93B; --amber-dim:#8A6626;
+    --teal:#4FD1C5; --green:#2DCC7A; --green-dim:#1A7548;
+    --text:#E7E6E1; --text-dim:#8B92A0; --text-faint:#5A6270; --danger:#E4685D;
+    --font-display:'Oswald',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--amber);color:#0B0F14;}
+
+  header{padding:80px 24px 60px;max-width:940px;margin:0 auto;border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+  .eyebrow::before{content:"";width:8px;height:8px;background:var(--amber);border-radius:1px;display:inline-block;animation:blink 2.4s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+  h1{font-family:var(--font-display);font-weight:600;font-size:clamp(32px,5vw,52px);line-height:1.1;margin:0 0 20px;letter-spacing:-.01em;}
+  h1 span{color:var(--text-dim);font-weight:400;}
+  .subhead{font-size:16px;color:var(--text-dim);max-width:680px;margin:0 0 28px;}
+  .principle{font-family:var(--font-mono);font-size:13px;color:var(--teal);border-left:2px solid var(--teal);padding:10px 16px;background:rgba(79,209,197,.06);max-width:680px;margin-bottom:28px;}
+  .stack-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .stack-chip{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);background:var(--bg-panel);border:1px solid var(--line-bright);border-radius:20px;padding:6px 14px;letter-spacing:.02em;}
+  .stack-chip b{color:var(--amber);font-weight:600;}
+
+  nav{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;gap:18px;overflow-x:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:.02em;}
+  nav a{color:var(--text-faint);text-decoration:none;white-space:nowrap;padding:4px 0;border-bottom:2px solid transparent;transition:color .15s;}
+  nav a:hover{color:var(--amber);border-color:var(--amber);}
+
+  main{max-width:940px;margin:0 auto;padding:0 24px;}
+  section{padding:60px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .section-label{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;}
+  h2{font-family:var(--font-display);font-size:clamp(22px,3.2vw,30px);font-weight:500;margin:0 0 16px;}
+  h3{font-family:var(--font-display);font-size:18px;font-weight:500;color:var(--text);margin:26px 0 10px;}
+  p{color:var(--text-dim);margin:0 0 14px;font-size:15px;}
+  strong{color:var(--text);font-weight:600;}
+  ul,ol{color:var(--text-dim);font-size:15px;padding-left:20px;}
+  li{margin-bottom:6px;}
+  em{color:var(--text-dim);}
+  code.inline{font-family:var(--font-mono);color:var(--teal);font-size:.92em;}
+
+  .callout{background:rgba(228,104,93,.07);border:1px solid rgba(228,104,93,.3);border-radius:6px;padding:16px 18px;margin:20px 0;}
+  .callout .tag{font-family:var(--font-mono);font-size:11px;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:block;}
+  .callout p{color:var(--text);margin:0;font-size:14px;}
+  .fix-box{background:rgba(79,209,197,.06);border:1px solid rgba(79,209,197,.25);border-radius:6px;padding:16px 18px;margin:20px 0;}
+  .fix-box .tag{font-family:var(--font-mono);font-size:11px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:block;}
+  .fix-box p{color:var(--text);margin:0;font-size:14px;}
+  .stack-tag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;color:var(--bg);background:var(--amber);border-radius:4px;padding:2px 8px;margin-left:8px;letter-spacing:.04em;vertical-align:middle;}
+  .stack-tag.alt{background:var(--teal);}
+
+  pre{background:var(--bg-code);border:1px solid var(--line);border-radius:6px;padding:18px 20px;overflow-x:auto;margin:16px 0 24px;}
+  code{font-family:var(--font-mono);font-size:12.5px;line-height:1.65;color:#C9D1D9;}
+  .c-key{color:var(--amber);} .c-str{color:var(--teal);} .c-com{color:var(--text-faint);font-style:italic;} .c-fn{color:#79B8FF;}
+
+  .route{position:relative;margin-top:40px;padding-left:44px;}
+  .route::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--amber-dim), var(--line-bright));}
+  .stop{position:relative;padding-bottom:44px;}
+  .stop:last-child{padding-bottom:0;}
+  .stop::before{content:"";position:absolute;left:-44px;top:2px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--amber);}
+  .stop::after{content:"";position:absolute;left:-36px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--amber);}
+  .stop-code{font-family:var(--font-mono);font-size:11px;color:var(--amber);letter-spacing:.1em;margin-bottom:4px;}
+  .stop h3{margin:0 0 8px;font-size:19px;}
+  .stop-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-bottom:12px;}
+  .stop-body{background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px;}
+  .stop-body ul{margin:0 0 10px;}
+  .stop-stack{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+
+  .schema{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0;}
+  @media (max-width:640px){.schema{grid-template-columns:1fr;} .rev-grid{grid-template-columns:1fr !important;} .admin-body{grid-template-columns:1fr !important;}}
+  .entity{background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;}
+  .entity h4{font-family:var(--font-mono);font-size:13px;color:var(--amber);margin:0 0 8px;letter-spacing:.03em;}
+  .entity ul{margin:0;padding-left:16px;font-size:12.5px;font-family:var(--font-mono);color:var(--text-dim);}
+  .entity li{margin-bottom:4px;}
+  .entity .fk{color:var(--teal);}
+  .entity.new-entity{border-color:var(--teal);}
+  .entity.geo-entity{border-color:var(--green-dim);}
+
+  .rev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0;}
+  .rev-card{background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;}
+  .rev-card .label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;}
+  .rev-card .value{font-family:var(--font-display);font-size:24px;color:var(--green);}
+  .rev-card .sub{font-size:12px;color:var(--text-dim);margin-top:4px;}
+  .rev-table{width:100%;border-collapse:collapse;margin:16px 0;}
+  .rev-table tr{border-bottom:1px solid var(--line);}
+  .rev-table tr:last-child{border-bottom:none;}
+  .rev-table td{padding:10px 0;font-size:13px;color:var(--text-dim);}
+  .rev-table td:last-child{text-align:right;font-family:var(--font-mono);color:var(--text);}
+  .rev-table tr.total td{color:var(--text);font-weight:600;border-top:1px solid var(--line-bright);padding-top:14px;}
+  .rev-table tr.total td:last-child{color:var(--green);}
+
+  .flow{display:flex;flex-direction:column;}
+  .flow-step{display:flex;gap:18px;}
+  .flow-line{display:flex;flex-direction:column;align-items:center;}
+  .flow-dot{width:9px;height:9px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:5px;}
+  .flow-dot.red{background:var(--danger);}
+  .flow-connector{width:1px;flex:1;background:var(--line-bright);min-height:20px;margin:4px 0;}
+  .flow-step:last-child .flow-connector{display:none;}
+  .flow-body{padding-bottom:22px;flex:1;}
+  .flow-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
+  .flow-desc{font-size:13px;color:var(--text-dim);margin:0;line-height:1.6;}
+
+  .fallback{background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;}
+  .fallback-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .fallback-row:last-child{border-bottom:none;}
+  .fallback-priority{color:var(--text-faint);width:18px;font-family:var(--font-mono);}
+  .fallback-bank{color:var(--text);width:80px;}
+  .fallback-balance{color:var(--text-dim);flex:1;font-family:var(--font-mono);font-size:12px;}
+  .fallback-status{font-size:10.5px;padding:2px 8px;border-radius:100px;font-family:var(--font-mono);}
+  .fallback-status.skip{background:var(--bg-code);color:var(--text-faint);}
+  .fallback-status.paid{background:rgba(45,204,122,.12);color:var(--green);}
+  .fallback-status.unused{background:transparent;color:var(--text-faint);border:1px solid var(--line);}
+
+  .endpoint-list{display:flex;flex-direction:column;gap:8px;}
+  .endpoint{display:flex;gap:12px;padding:12px 16px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;align-items:flex-start;}
+  .endpoint-method{font-family:var(--font-mono);font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:600;min-width:44px;text-align:center;flex-shrink:0;}
+  .endpoint-method.get{background:rgba(77,168,232,.12);color:#4DA8E8;}
+  .endpoint-method.post{background:rgba(45,204,122,.12);color:var(--green);}
+  .endpoint-method.ws{background:rgba(79,209,197,.12);color:var(--teal);}
+  .endpoint-path{font-family:var(--font-mono);font-size:12px;color:var(--text);margin-bottom:2px;}
+  .endpoint-desc{font-size:12px;color:var(--text-dim);margin:0;}
+
+  .admin-mockup{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:20px 0;}
+  .admin-bar{background:var(--bg-panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+  .admin-bar-dot{width:7px;height:7px;border-radius:50%;}
+  .admin-bar-title{font-size:12px;color:var(--text-dim);margin-left:8px;flex:1;font-family:var(--font-mono);}
+  .admin-bar-live{font-size:10px;padding:2px 8px;background:rgba(45,204,122,.12);color:var(--green);border-radius:100px;display:flex;align-items:center;gap:5px;font-family:var(--font-mono);}
+  .admin-bar-live::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .admin-body{display:grid;grid-template-columns:1fr 240px;min-height:240px;}
+  .admin-map{background:var(--bg);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);}
+  .admin-map-grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:30px 30px;opacity:.4;}
+  .admin-map-label{font-size:11px;color:var(--text-faint);z-index:1;text-align:center;font-family:var(--font-mono);}
+  .keke-dot{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink2 2s infinite;}
+  @keyframes blink2{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .keke-dot:nth-child(2){top:38%;left:28%;animation-delay:.3s}
+  .keke-dot:nth-child(3){top:55%;left:48%;animation-delay:.7s}
+  .keke-dot:nth-child(4){top:34%;left:62%;animation-delay:1s}
+  .keke-dot:nth-child(5){top:65%;left:23%;animation-delay:.5s}
+  .keke-dot:nth-child(6){top:27%;left:55%;animation-delay:1.2s}
+  .heat-zone{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(45,204,122,.15) 0%,transparent 70%);}
+  .admin-stats{padding:14px;display:flex;flex-direction:column;gap:12px;}
+  .stat-row{border-bottom:1px solid var(--line);padding-bottom:12px;}
+  .stat-row:last-child{border-bottom:none;padding-bottom:0;}
+  .stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px;font-family:var(--font-mono);}
+  .stat-value{font-family:var(--font-display);font-size:20px;color:var(--text);}
+  .stat-value.green{color:var(--green);}
+  .stat-value.teal{color:var(--teal);}
+  .stat-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0;}
+  @media (max-width:640px){.mode-grid{grid-template-columns:1fr;}}
+  .mode-card{background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;}
+  .mode-card.teal{border-color:rgba(79,209,197,.35);}
+  .mode-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;}
+  .mode-card.teal .mode-label{color:var(--teal);}
+  .mode-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;}
+  .mode-items{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .mode-items li{font-size:12.5px;color:var(--text-dim);}
+  .mode-items li::before{content:"· ";color:var(--text-faint);}
+
+  .funding-table{width:100%;border-collapse:collapse;margin:16px 0;}
+  .funding-table tr{border-bottom:1px solid var(--line);}
+  .funding-table tr:last-child{border-bottom:none;}
+  .funding-table td{padding:12px 0;font-size:13px;color:var(--text-dim);}
+  .funding-table td:first-child{color:var(--text);font-weight:600;width:90px;}
+  .funding-table td:last-child{text-align:right;font-family:var(--font-mono);color:var(--green);}
+
+  footer{padding:50px 24px 80px;max-width:940px;margin:0 auto;color:var(--text-faint);font-size:13px;font-family:var(--font-mono);}
+
+  .checklist{list-style:none;padding:0;margin:0 0 8px;}
+  .checklist li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:13.5px;color:var(--text-dim);border-bottom:1px solid var(--line);}
+  .checklist li:last-child{border-bottom:none;}
+  .checklist li::before{content:"☐";color:var(--amber);flex-shrink:0;font-size:14px;line-height:1.4;}
+  .checklist li strong{color:var(--text);}
+  .checklist.cross li::before{color:var(--teal);}
+  .sec-phase{border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:16px;}
+  .sec-phase-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .sec-phase-code{font-family:var(--font-mono);font-size:11px;color:var(--amber);letter-spacing:.08em;background:var(--bg-panel);border:1px solid var(--line-bright);border-radius:4px;padding:3px 9px;}
+  .sec-phase-name{font-size:14px;font-weight:600;color:var(--text);}
+
+  .tracker-overall{background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:24px;}
+  .tracker-overall-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .tracker-overall-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);}
+  .tracker-overall-count{font-family:var(--font-display);font-size:20px;color:var(--teal);}
+  .tracker-bar{height:6px;background:var(--bg-code);border-radius:4px;overflow:hidden;}
+  .tracker-bar-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--teal));border-radius:4px;transition:width .3s ease;width:0%;}
+
+  .tracker-phase{border:1px solid var(--line);border-radius:6px;margin-bottom:14px;overflow:hidden;}
+  .tracker-phase-head{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--bg-panel);border-bottom:1px solid var(--line);}
+  .tracker-phase-progress{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-faint);}
+  .tracker-items{padding:6px 0;}
+  .tracker-item{display:flex;align-items:flex-start;gap:12px;padding:9px 18px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .12s;}
+  .tracker-item:last-child{border-bottom:none;}
+  .tracker-item:hover{background:var(--bg-panel);}
+  .tracker-checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line-bright);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .tracker-checkbox.checked{background:var(--teal);border-color:var(--teal);}
+  .tracker-checkbox.checked::after{content:"✓";font-size:11px;color:var(--bg);font-weight:700;}
+  .tracker-text{font-size:13.5px;color:var(--text-dim);line-height:1.5;}
+  .tracker-item.done .tracker-text{color:var(--text-faint);text-decoration:line-through;}
+  .tracker-reset{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);background:none;border:1px solid var(--line-bright);border-radius:4px;padding:6px 12px;cursor:pointer;margin-top:14px;}
+  .tracker-reset:hover{color:var(--danger);border-color:var(--danger);}
+  .tracker-note{font-size:12px;color:var(--text-faint);margin-top:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Master Build Reference · Transport Intelligence System</div>
+  <h1>Verify once. <span>Travel instantly thereafter.</span></h1>
+  <p class="subhead">One consolidated document — architecture, security fixes, schema, geospatial layer, Flutter structure, admin dashboard, and phased roadmap for the Ilorin transport platform.</p>
+  <div class="principle">Fingerprint = identity, verified once. NFC card = daily key. Terminal = receiver only — it never decides where money goes.</div>
+  <div class="stack-row">
+    <span class="stack-chip"><b>API</b> Go + Gin</span>
+    <span class="stack-chip"><b>DB</b> PostgreSQL + PostGIS</span>
+    <span class="stack-chip"><b>Payments</b> Moniepoint bridge</span>
+    <span class="stack-chip"><b>Identity</b> NIMC / VSP fingerprint verification</span>
+    <span class="stack-chip"><b>Driver terminal</b> Flutter</span>
+    <span class="stack-chip"><b>Admin / GIS</b> React + Mapbox + Deck.gl</span>
+  </div>
+</header>
+
+<nav>
+  <a href="#stack">Stack</a>
+  <a href="#learning">Learning</a>
+  <a href="#revenue">Revenue</a>
+  <a href="#fix">Session Fix</a>
+  <a href="#binding">Device Binding</a>
+  <a href="#schema">Data Model</a>
+  <a href="#payment">Payment Flow</a>
+  <a href="#geospatial">Geospatial</a>
+  <a href="#pseudocode">Pseudocode</a>
+  <a href="#hq">Terminal HW / HQ</a>
+  <a href="#dashboard">Admin/GIS</a>
+  <a href="#flutter">Flutter Structure</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#security">Security Checklist</a>
+  <a href="#tracker">Security Tracker</a>
+  <a href="#gaps">Open Gaps</a>
+  <a href="#funding">Funding</a>
+</nav>
+
+<main>
+
+  <section id="stack">
+    <div class="section-label">Locked decisions</div>
+    <h2>Tech stack, end to end</h2>
+    <p>Nothing here is provisional — every phase in this doc builds against these choices.</p>
+    <div class="schema">
+      <div class="entity"><h4>Backend API</h4><ul><li>Go + Gin</li><li>Owns identity, session, terminal binding, payout resolution, trip ledger</li><li>Only service allowed to decide where funds route</li></ul></div>
+      <div class="entity"><h4>Database</h4><ul><li>PostgreSQL + PostGIS extension</li><li>Migration off in-memory storage completes in T0</li><li>Geo queries live in the same DB — no separate geo store</li></ul></div>
+      <div class="entity"><h4>Payments</h4><ul><li>Moniepoint — collection + disbursement via NIP rails</li><li>Zero-custody — funds never sit in a platform-held wallet</li></ul></div>
+      <div class="entity"><h4>Identity verification</h4><ul><li>NIMC direct, or licensed VSP (T1 default)</li><li>One-time enrollment call; local template cached after</li></ul></div>
+      <div class="entity"><h4>Driver terminal — Flutter</h4><ul><li>NFC capture, fingerprint capture, GPS ping</li><li>Holds a device-bound key, never a payout config</li></ul></div>
+      <div class="entity"><h4>Admin / GIS — React</h4><ul><li>Mapbox GL JS for the live street map</li><li>Deck.gl for heatmap / investor-mode visuals</li><li>Go WebSockets for live position updates</li></ul></div>
+    </div>
+  </section>
+
+  <section id="learning">
+    <div class="section-label">Personal roadmap</div>
+    <h2>Learning sequence</h2>
+    <p>Tied to the build phases below — learn each language when its phase needs it, not before.</p>
+    <div class="route">
+      <div class="stop">
+        <div class="stop-code">NOW → T1</div>
+        <h3>Dart <span class="stack-tag alt">Flutter</span></h3>
+        <div class="stop-meta">The driver terminal app blocks the whole MVP</div>
+        <div class="stop-body">
+          <p>Closest language to Go you'll touch here. Unfamiliar parts: Dart's async/await style and Riverpod's state model — no direct Go equivalent for either.</p>
+          <ul><li>Focus: async/await, null safety, class/widget structure, then Riverpod specifically</li><li>Apply to: <code class="inline">features/session</code> and <code class="inline">features/nfc_tap</code></li></ul>
+        </div>
+      </div>
+      <div class="stop">
+        <div class="stop-code">T2</div>
+        <h3>TypeScript <span class="stack-tag alt">React</span></h3>
+        <div class="stop-meta">Needed once the admin/GIS dashboard build starts</div>
+        <div class="stop-body">
+          <p>TypeScript over plain JS — your Go structs already gave you a type-discipline habit; mirroring them as TS interfaces keeps that at the browser boundary.</p>
+          <ul><li>Focus: interfaces/types first, hooks second</li><li>Apply to: live map, session status panel, provisioning console</li></ul>
+        </div>
+      </div>
+      <div class="stop">
+        <div class="stop-code">T4 → T5</div>
+        <h3>Python + PyTorch</h3>
+        <div class="stop-meta">Already your long-term plan — lands once there's real trip volume</div>
+        <div class="stop-body">
+          <p>Not urgent. Today's anomaly detection is rule-based logic in Go. Once trip volume is real, fraud scoring becomes an ML problem — its own service, called from Go, not a rewrite of it.</p>
+          <ul><li>Sequence unchanged: Python fundamentals → math foundations → PyTorch</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="revenue">
+    <div class="section-label">Business model</div>
+    <h2>Revenue</h2>
+    <p>The platform takes a 5% fee per trip. No money is held — it moves passenger-to-driver via Moniepoint, platform fee skimmed at settlement.</p>
+    <div class="rev-grid">
+      <div class="rev-card"><div class="label">Net per trip</div><div class="value">₦5–7</div><div class="sub">after Moniepoint fee</div></div>
+      <div class="rev-card"><div class="label">At 10k trips/day</div><div class="value">₦70k</div><div class="sub">daily platform revenue</div></div>
+      <div class="rev-card"><div class="label">Monthly (Keke, one city)</div><div class="value">~₦2M</div><div class="sub">one vehicle class only</div></div>
+    </div>
+    <table class="rev-table">
+      <tr><td>Fare per trip (Keke)</td><td>₦200</td></tr>
+      <tr><td>Platform fee (5%)</td><td>₦10</td></tr>
+      <tr><td>Driver receives</td><td>₦190</td></tr>
+      <tr><td>Moniepoint fee (est.)</td><td>~₦3–5</td></tr>
+      <tr class="total"><td>Net per trip</td><td>~₦5–7</td></tr>
+    </table>
+    <p style="font-size:12.5px;color:var(--text-faint);">Scales linearly — adding motorcycle feeders and BRT multiplies this without rebuilding the fee logic.</p>
+  </section>
+
+  <section id="fix">
+    <div class="section-label">Fixing the gap — part 1</div>
+    <h2>Driver re-verification (session model)</h2>
+    <p>A driver used to bind to a vehicle once, permanently — a stolen or borrowed terminal kept operating as that driver indefinitely. Fix: operating a vehicle requires a short-lived, renewable <strong>session</strong>.</p>
+    <div class="callout"><span class="tag">Risk closed</span><p>Whoever physically holds the terminal is no longer automatically "the driver" — a live, expiring session is required, re-confirmed on a schedule and on anomaly.</p></div>
+    <ul>
+      <li><strong>Shift-start check-in</strong> — fingerprint matched against the locally cached template, opens a session with a TTL.</li>
+      <li><strong>Session TTL</strong> — expires after 8–12 hrs or terminal power cycle; Go rejects trip authorization on expiry.</li>
+      <li><strong>Risk-triggered re-check</strong> — GPS jump or impossible velocity forces immediate re-scan mid-session.</li>
+      <li><strong>Periodic re-verification</strong> — every 30–90 days, session start requires a live VSP call, not just the cache.</li>
+    </ul>
+  </section>
+
+  <section id="binding">
+    <div class="section-label">Fixing the gap — part 2</div>
+    <h2>Device binding &amp; receiver-only terminals</h2>
+    <p>Session auth answers "is the right driver operating right now." It doesn't stop someone tampering with <em>where the money goes</em> — this fix closes that separately.</p>
+    <h3>Device-identity binding</h3>
+    <p>Each physical terminal is registered to exactly one driver at provisioning time, keyed by hardware ID — longer-lived than a session.</p>
+    <h3>Receiver-only architecture</h3>
+    <p>On a tap, Flutter captures the NFC UID, signs it with the device-bound key, and relays <code class="inline">card_uid + terminal_id + nonce + timestamp</code>. Payout destination is resolved <strong>only</strong> server-side, from the Postgres binding record.</p>
+    <div class="fix-box"><span class="tag">Net effect</span><p>There is nothing on the device to edit, root, or reflash to redirect funds — the routing decision was never on the device.</p></div>
+    <h3>Replay protection</h3>
+    <p>Every tap carries a single-use signed nonce; Go rejects any nonce already consumed.</p>
+    <h3>Rebinding is privileged and re-verified</h3>
+    <p>Rebinding a terminal requires an admin action <em>and</em> the new driver's fresh fingerprint — never just a database field toggle.</p>
+  </section>
+
+  <section id="schema">
+    <div class="section-label">Data model</div>
+    <h2>Core entities</h2>
+    <p><span style="color:var(--teal);font-family:var(--font-mono);">session</span> and the binding fields on <span style="color:var(--teal);font-family:var(--font-mono);">terminal</span> close the two gaps above. Geo fields on <span style="color:var(--green);font-family:var(--font-mono);">trip</span> and the two new geospatial tables power the map and analytics.</p>
+    <div class="schema">
+      <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | <span class="fk">agent</span></li><li>last_verified_at</li></ul></div>
+      <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>card_uid</li><li>status: active | void | reissued</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li></ul></div>
+      <div class="entity new-entity"><h4>card_batch <span class="fk">(agent accounting)</span></h4><ul><li>id (pk)</li><li>agent_id <span class="fk">→ identity (agent)</span></li><li>quantity_allocated</li><li>quantity_returned</li><li>quantity_damaged</li><li>status: open | reconciled | discrepancy</li><li>allocated_at, reconciled_at, reconciled_by_admin_id</li></ul></div>
+      <div class="entity new-entity"><h4>session <span class="fk">(fix 1)</span></h4><ul><li>id (pk)</li><li>driver_identity_id <span class="fk">→ identity</span></li><li>terminal_id <span class="fk">→ terminal</span></li><li>token, started_at, expires_at</li><li>verify_method: local_match | live_reverify</li><li>status: active | expired | flagged</li></ul></div>
+      <div class="entity new-entity"><h4>terminal <span class="fk">(fix 2)</span></h4><ul><li>id (pk), zone</li><li>hardware_serial <span class="fk">// physical device key</span></li><li>bound_driver_identity_id <span class="fk">→ identity</span></li><li>bound_at, bound_by_admin_id</li><li><em>no payout config stored here</em></li></ul></div>
+      <div class="entity"><h4>vehicle</h4><ul><li>id (pk), plate_ref</li><li>operator_identity_id <span class="fk">→ identity</span></li><li>class: motorcycle | keke | taxi | bus</li><li>compliance_status</li></ul></div>
+      <div class="entity"><h4>trip</h4><ul><li>id (pk)</li><li>passenger_identity_id <span class="fk">→ identity</span></li><li>session_id <span class="fk">→ session</span></li><li>nonce <span class="fk">// replay-checked</span></li><li>entry_terminal_id, exit_terminal_id</li><li class="fk">pickup_point: geometry(Point,4326)</li><li class="fk">dropoff_point: geometry(Point,4326)</li><li>fare, fee_split, timestamps</li></ul></div>
+      <div class="entity geo-entity"><h4>terminal_locations <span class="fk">(geo)</span></h4><ul><li>id (pk)</li><li>terminal_id <span class="fk">→ terminal</span></li><li class="fk">location: geometry(Point,4326)</li><li>recorded_at</li></ul></div>
+      <div class="entity geo-entity"><h4>corridor_stats <span class="fk">(geo)</span></h4><ul><li>id (pk), corridor_name</li><li class="fk">geom: geometry(LineString,4326)</li><li>trip_count, revenue_total</li><li>updated_at</li></ul></div>
+    </div>
+    <pre><code><span class="c-com">-- enabled once, in T0</span>
+<span class="c-key">CREATE EXTENSION</span> postgis;
+<span class="c-key">CREATE EXTENSION</span> postgis_topology;</code></pre>
+  </section>
+
+  <section id="payment">
+    <div class="section-label">Transaction lifecycle</div>
+    <h2>Payment flow</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-body"><div class="flow-title">1 — Tap</div><p class="flow-desc">Flutter captures NFC card + signs a nonce, sends to Go over HTTPS with pickup coordinates.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-body"><div class="flow-title">2 — Identify &amp; validate session</div><p class="flow-desc">Go looks up the credential, checks the terminal's active session and expiry.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-body"><div class="flow-title">3 — Fallback chain</div><p class="flow-desc">Passenger's linked accounts tried in priority order until one has sufficient balance.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-body"><div class="flow-title">4 — Moniepoint executes</div><p class="flow-desc">Debits passenger, credits the driver account resolved server-side from the terminal binding. Settles under 5s via NIP rails.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
+        <div class="flow-body"><div class="flow-title">5 — Geo + commit</div><p class="flow-desc">Trip written with pickup_point geometry, corridor stats updated, WebSocket broadcasts the new position to the admin map.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot red"></div></div>
+        <div class="flow-body"><div class="flow-title">On failure — automatic rollback</div><p class="flow-desc">Postgres transaction rolls back entirely. Passenger balance untouched, nonce not consumed, scanner gets a retry response.</p></div></div>
+    </div>
+    <h3>Multi-account fallback</h3>
+    <div class="fallback">
+      <div class="fallback-row"><span class="fallback-priority">1</span><span class="fallback-bank">GTBank</span><span class="fallback-balance">₦0 balance</span><span class="fallback-status skip">skip</span></div>
+      <div class="fallback-row"><span class="fallback-priority">2</span><span class="fallback-bank">OPay</span><span class="fallback-balance">₦450 — debit ₦200</span><span class="fallback-status paid">✓ paid</span></div>
+      <div class="fallback-row"><span class="fallback-priority">3</span><span class="fallback-bank">PalmPay</span><span class="fallback-balance">not reached</span><span class="fallback-status unused">—</span></div>
+    </div>
+    <p style="font-size:12.5px;margin-top:10px;">Driver sees <strong style="color:var(--green);">"Payment successful"</strong> · Passenger sees <strong>"Paid from OPay · GTBank had insufficient funds"</strong></p>
+  </section>
+
+  <section id="geospatial">
+    <div class="section-label">Geospatial layer</div>
+    <h2>PostGIS</h2>
+    <p>Every terminal pings coordinates every 30–60s. Every tap records a pickup geometry. This is what turns Postgres into the source for the live map, dead-zone detection, and corridor analytics.</p>
+    <h3>Scanner GPS ping</h3>
+    <pre><code><span class="c-com">// every 30–60s</span>
+<span class="c-fn">POST</span> /location
+{
+  <span class="c-str">"terminal_id"</span>: <span class="c-str">"KEKE_001"</span>,
+  <span class="c-str">"lat"</span>: 8.4966,
+  <span class="c-str">"lng"</span>: 4.5426
+}
+<span class="c-com">// updates terminal_locations, broadcasts to /ws/map</span></code></pre>
+    <h3>Power queries</h3>
+    <pre><code><span class="c-com">-- active terminals within 2km of a point</span>
+<span class="c-key">SELECT</span> t.id, t.vehicle_plate
+<span class="c-key">FROM</span> terminals t
+<span class="c-key">WHERE</span> ST_DWithin(
+  ST_MakePoint(t.last_lng, t.last_lat)<span class="c-com">::geography</span>,
+  ST_MakePoint(4.5426, 8.4966)<span class="c-com">::geography</span>,
+  2000
+);
+
+<span class="c-com">-- trip density heatmap, last 24h</span>
+<span class="c-key">SELECT</span> ST_SnapToGrid(pickup_point, 0.005) <span class="c-key">AS</span> cell, <span class="c-key">COUNT</span>(*) <span class="c-key">AS</span> trip_count
+<span class="c-key">FROM</span> trips
+<span class="c-key">WHERE</span> tapped_at > <span class="c-key">NOW</span>() - <span class="c-key">INTERVAL</span> <span class="c-str">'24 hours'</span>
+<span class="c-key">GROUP BY</span> cell <span class="c-key">ORDER BY</span> trip_count <span class="c-key">DESC</span>;</code></pre>
+    <h3>New endpoints</h3>
+    <div class="endpoint-list">
+      <div class="endpoint"><span class="endpoint-method post">POST</span><div><div class="endpoint-path">/location</div><p class="endpoint-desc">Scanner GPS ping — updates position, broadcasts via WebSocket.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method get">GET</span><div><div class="endpoint-path">/admin/terminals/live</div><p class="endpoint-desc">All active terminals with lat/lng, driver, trips today. Powers the live map.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method get">GET</span><div><div class="endpoint-path">/admin/heatmap</div><p class="endpoint-desc">Trip density by grid cell, last 24h. GeoJSON for the Deck.gl layer.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method get">GET</span><div><div class="endpoint-path">/admin/corridors</div><p class="endpoint-desc">Top routes by trip volume with geometry.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method get">GET</span><div><div class="endpoint-path">/admin/revenue/live</div><p class="endpoint-desc">Running platform revenue total for today.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method ws">WS</span><div><div class="endpoint-path">/ws/map</div><p class="endpoint-desc">Admin map subscribes here for real-time terminal position updates.</p></div></div>
+    </div>
+  </section>
+
+  <section id="pseudocode">
+    <div class="section-label">Reference flows</div>
+    <h2>Pseudocode</h2>
+    <p style="font-size:13px;font-family:var(--font-mono);color:var(--text-faint);">Flutter → Go over HTTPS. Go owns every write to Postgres. Nothing runs payout logic on-device.</p>
+
+    <h3>1 — Identity enrollment <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// slow path, once per person</span>
+<span class="c-fn">func</span> EnrollIdentity(scan FingerprintScan, role Role) (*Identity, error) {
+    result := <span class="c-fn">vsp.VerifyFingerprint</span>(scan)
+    <span class="c-key">if</span> result.Confidence < Threshold {
+        <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"low confidence, retry"</span>)
+    }
+    template := <span class="c-fn">deriveDeviceBoundTemplate</span>(scan)
+    identity := <span class="c-fn">db.CreateIdentity</span>(Identity{
+        NINRef: result.NINToken, TemplateHash: <span class="c-fn">hash</span>(template),
+        Role: role, LastVerified: <span class="c-fn">time.Now</span>(),
+    })
+    <span class="c-key">if</span> role == Driver { <span class="c-fn">requireVehicleLink</span>(identity.ID) }
+    <span class="c-key">return</span> identity, nil
+}</code></pre>
+
+    <h3>2 — Terminal provisioning &amp; rebind <span class="stack-tag">Go</span> <span class="stack-tag alt">React</span></h3>
+    <pre><code><span class="c-fn">func</span> ProvisionTerminal(serial, driverID, adminID string) (*Terminal, error) {
+    <span class="c-key">return</span> <span class="c-fn">db.CreateTerminal</span>(Terminal{HardwareSerial: serial, BoundDriverID: driverID, BoundAt: <span class="c-fn">time.Now</span>(), BoundByAdmin: adminID})
+}
+
+<span class="c-com">// requires the NEW driver's fresh fingerprint — not just an admin toggle</span>
+<span class="c-fn">func</span> RebindTerminal(terminalID string, newDriverScan FingerprintScan, adminID string) error {
+    result := <span class="c-fn">vsp.VerifyFingerprint</span>(newDriverScan)
+    <span class="c-key">if</span> !result.Match { <span class="c-key">return</span> <span class="c-fn">errors.New</span>(<span class="c-str">"new driver verification failed"</span>) }
+    <span class="c-key">return</span> <span class="c-fn">db.UpdateTerminalBinding</span>(terminalID, result.IdentityID, adminID)
+}</code></pre>
+
+    <h3>3 — Driver shift-start session <span class="stack-tag alt">Flutter</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-fn">func</span> StartDriverSession(driverID, terminalID string, scan FingerprintScan) (*Session, error) {
+    terminal := <span class="c-fn">db.GetTerminal</span>(terminalID)
+    <span class="c-key">if</span> terminal.BoundDriverID != driverID { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"terminal not bound to this driver"</span>) }
+
+    identity := <span class="c-fn">db.GetIdentity</span>(driverID)
+    daysSince := <span class="c-fn">time.Since</span>(identity.LastVerified).Hours() / 24
+    method := <span class="c-str">"local_match"</span>
+
+    <span class="c-key">if</span> daysSince > ReverifyWindowDays {
+        result := <span class="c-fn">vsp.VerifyFingerprint</span>(scan)
+        <span class="c-key">if</span> !result.Match { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"re-verification failed"</span>) }
+        <span class="c-fn">db.UpdateLastVerified</span>(driverID, <span class="c-fn">time.Now</span>())
+        method = <span class="c-str">"live_reverify"</span>
+    } <span class="c-key">else</span> {
+        <span class="c-key">if</span> !<span class="c-fn">matchLocalTemplate</span>(identity.TemplateHash, scan) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"fingerprint mismatch"</span>) }
+    }
+
+    <span class="c-key">return</span> <span class="c-fn">db.CreateSession</span>(Session{
+        DriverID: driverID, TerminalID: terminalID, Token: <span class="c-fn">generateToken</span>(),
+        ExpiresAt: <span class="c-fn">time.Now</span>().Add(ShiftTTL), VerifyMethod: method, Status: <span class="c-str">"active"</span>,
+    }), nil
+}</code></pre>
+
+    <h3>4 — Trip authorization + replay check <span class="stack-tag alt">Flutter</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-fn">func</span> AuthorizeTrip(cardUID, terminalID, nonce string) (*Trip, error) {
+    <span class="c-key">if</span> <span class="c-fn">db.NonceSeen</span>(nonce) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"replay detected"</span>) }
+    credential := <span class="c-fn">db.FindCredentialByCard</span>(cardUID)
+    <span class="c-key">if</span> credential.Status != <span class="c-str">"active"</span> { <span class="c-key">return</span> <span class="c-fn">Fallback</span>(terminalID) }
+    session := <span class="c-fn">db.FindActiveSession</span>(terminalID)
+    <span class="c-key">if</span> session == nil || session.ExpiresAt.Before(<span class="c-fn">time.Now</span>()) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"no active driver session"</span>) }
+
+    terminal := <span class="c-fn">db.GetTerminal</span>(terminalID)
+    payoutAccount := <span class="c-fn">db.GetLinkedAccount</span>(terminal.BoundDriverID)
+
+    trip := <span class="c-fn">db.CreateTrip</span>(Trip{PassengerID: credential.IdentityID, SessionID: session.ID, EntryTerminal: terminalID, Nonce: nonce, Fare: <span class="c-fn">calculateFare</span>(terminalID)})
+    <span class="c-fn">moniepoint.Transfer</span>(credential.IdentityID, payoutAccount, trip.Fare)
+    <span class="c-fn">db.MarkNonceUsed</span>(nonce)
+    <span class="c-key">return</span> trip, nil
+}</code></pre>
+
+    <h3>5 — Fallback chain <span class="stack-tag alt">Flutter</span></h3>
+    <pre><code><span class="c-fn">func</span> Fallback(terminalID string) (*Trip, error) {
+    methods := []string{<span class="c-str">"pin_entry"</span>, <span class="c-str">"ussd_code"</span>, <span class="c-str">"fingerprint_scan"</span>}
+    <span class="c-key">for</span> _, m := <span class="c-key">range</span> methods {
+        <span class="c-key">if</span> result := <span class="c-fn">tryMethod</span>(m, terminalID); result.Success { <span class="c-key">return</span> result.Trip, nil }
+    }
+    <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"manual driver override — cash, flagged for reconciliation"</span>)
+}</code></pre>
+
+    <h3>6 — Centralized ops: new driver registration <span class="stack-tag alt">Flutter (ops mode)</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// run by HQ ops staff, not field agents — this binds hardware to a driver,</span>
+<span class="c-com">// which is a security-sensitive action kept centralized on purpose</span>
+<span class="c-fn">func</span> RegisterNewDriver(scan FingerprintScan, vehicle VehicleDetails, terminalSerial, adminID string) (*Driver, error) {
+    identity, err := <span class="c-fn">EnrollIdentity</span>(scan, Driver)
+    <span class="c-key">if</span> err != nil { <span class="c-key">return</span> nil, err }
+
+    v := <span class="c-fn">db.CreateVehicle</span>(Vehicle{OperatorID: identity.ID, PlateRef: vehicle.Plate, Class: vehicle.Class})
+    terminal, err := <span class="c-fn">ProvisionTerminal</span>(terminalSerial, identity.ID, adminID)
+    <span class="c-key">if</span> err != nil { <span class="c-key">return</span> nil, err }
+
+    <span class="c-key">return</span> &Driver{Identity: identity, Vehicle: v, Terminal: terminal}, nil
+}</code></pre>
+
+    <h3>7 — Field agent: new passenger registration <span class="stack-tag alt">Flutter (agent mode)</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// run by a field agent at a terminal location, from card stock HQ delivered them</span>
+<span class="c-fn">func</span> RegisterPassenger(scan FingerprintScan, bank BankDetails, newCardUID, agentID string) (*Identity, *Credential, error) {
+    agent := <span class="c-fn">db.GetIdentity</span>(agentID)
+    <span class="c-key">if</span> agent.Role != Agent { <span class="c-key">return</span> nil, nil, <span class="c-fn">errors.New</span>(<span class="c-str">"only agents can register passengers"</span>) }
+
+    identity, err := <span class="c-fn">EnrollIdentity</span>(scan, Passenger)
+    <span class="c-key">if</span> err != nil { <span class="c-key">return</span> nil, nil, err }
+
+    <span class="c-fn">db.LinkAccount</span>(identity.ID, bank)
+    cred := <span class="c-fn">issueCard</span>(identity.ID, newCardUID, agentID) <span class="c-com">// traceable to the issuing agent</span>
+    <span class="c-key">return</span> identity, cred, nil
+}</code></pre>
+
+    <h3>8 — Field agent: lost card recovery <span class="stack-tag alt">Flutter (agent mode)</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// the whole point of the agent network — a passenger gets a working card back</span>
+<span class="c-com">// on the spot, at whichever terminal location they happen to be at</span>
+<span class="c-fn">func</span> ReissueCard(claimedIdentityID string, freshScan FingerprintScan, newCardUID, agentID string) (*Credential, error) {
+    result := <span class="c-fn">vsp.VerifyFingerprint</span>(freshScan) <span class="c-com">// live check — agent hardware never enrolled this person</span>
+    <span class="c-key">if</span> !result.Match { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"identity mismatch — not issuing a card"</span>) }
+    <span class="c-key">if</span> result.IdentityID != claimedIdentityID { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"scan does not match the account being recovered"</span>) }
+
+    <span class="c-fn">db.VoidCredential</span>(claimedIdentityID)
+    <span class="c-key">return</span> <span class="c-fn">issueCard</span>(claimedIdentityID, newCardUID, agentID), nil
+}</code></pre>
+
+    <h3>9 — Shift start: allocate cards to an agent <span class="stack-tag alt">Flutter (agent mode)</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-fn">func</span> AllocateCards(agentID string, quantity int, adminID string) (*CardBatch, error) {
+    <span class="c-key">return</span> <span class="c-fn">db.CreateCardBatch</span>(CardBatch{
+        AgentID: agentID, QuantityAllocated: quantity,
+        Status: <span class="c-str">"open"</span>, AllocatedAt: <span class="c-fn">time.Now</span>(),
+    }), nil
+}</code></pre>
+
+    <h3>10 — Shift end: reconcile the batch <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// every allocated card resolves into issued + returned + damaged — no exceptions.</span>
+<span class="c-com">// damaged is tracked separately so a frayed card doesn't look like a missing one</span>
+<span class="c-fn">func</span> ReconcileShift(batchID string, quantityReturned, quantityDamaged int, adminID string) (*CardBatch, error) {
+    batch := <span class="c-fn">db.GetCardBatch</span>(batchID)
+    quantityIssued := <span class="c-fn">db.CountCredentialsIssuedByAgent</span>(batch.AgentID, batch.AllocatedAt, <span class="c-fn">time.Now</span>())
+
+    accounted := quantityIssued + quantityReturned + quantityDamaged
+    <span class="c-key">if</span> accounted != batch.QuantityAllocated {
+        <span class="c-fn">db.UpdateCardBatch</span>(batchID, Status: <span class="c-str">"discrepancy"</span>, QuantityReturned: quantityReturned, QuantityDamaged: quantityDamaged)
+        <span class="c-fn">checkDiscrepancyPattern</span>(batch.AgentID) <span class="c-com">// tiered policy — see below</span>
+        <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"card count mismatch — flagged for HQ review"</span>)
+    }
+
+    <span class="c-key">return</span> <span class="c-fn">db.UpdateCardBatch</span>(batchID, Status: <span class="c-str">"reconciled"</span>, QuantityReturned: quantityReturned, QuantityDamaged: quantityDamaged, ReconciledBy: adminID, ReconciledAt: <span class="c-fn">time.Now</span>()), nil
+}
+
+<span class="c-com">// tier 2 of the policy — pause allocation until a pattern is reviewed</span>
+<span class="c-fn">func</span> checkDiscrepancyPattern(agentID string) {
+    recent := <span class="c-fn">db.CountDiscrepancies</span>(agentID, <span class="c-fn">last30Days</span>())
+    <span class="c-key">if</span> recent >= 2 {
+        <span class="c-fn">db.FlagAgentForReview</span>(agentID) <span class="c-com">// blocks AllocateCards until HQ clears it</span>
+    }
+}</code></pre>
+  </section>
+
+  <section id="hq">
+    <div class="section-label">Hardware &amp; operations</div>
+    <h2>Terminal hardware, agents &amp; HQ monitoring</h2>
+    <p>Two different "terminal" concepts get used loosely in this project — worth being precise here. The <strong>device terminal</strong> is the driver's handheld/mounted hardware, bound to exactly one driver (the <code class="inline">terminal</code> table). A <strong>terminal location</strong> is a physical pickup point (Tanke, Challenge) — where field agents are stationed.</p>
+
+    <h3>Device terminal — build options</h3>
+    <ul>
+      <li><strong>T1 default: budget Android device.</strong> Mid-range phones with both NFC and a fingerprint sensor already exist in the ₦40k–70k range. Runs your Flutter app directly — no new language, no embedded hardware R&amp;D.</li>
+      <li><strong>T4/T5 option: custom hardware.</strong> ESP32/RPi Zero + PN532 NFC + fingerprint module + GSM + GPS, running embedded C/C++ or MicroPython. Only worth it once device cost at scale is the actual bottleneck.</li>
+    </ul>
+
+    <h3>HQ — monitoring only</h3>
+    <p>HQ does not run registration. It's the React + Mapbox admin dashboard — live driver/vehicle positions, session status, revenue, anomaly flags, and the terminal provisioning/rebind console. Its one operational role beyond monitoring is <strong>new driver onboarding</strong>, kept centralized because it binds physical hardware to a driver — a security-sensitive action, not a customer-service one.</p>
+
+    <h3>Field agents — fast, distributed, passenger-facing</h3>
+    <p>Agents are stationed at terminal locations and run the same Flutter app in a separate <code class="inline">agent mode</code>, gated by an agent login. HQ delivers them physical NFC card stock; agents handle:</p>
+    <ul>
+      <li><strong>New passenger registration</strong> — identity enrollment, Moniepoint account link, card issuance, on the spot.</li>
+      <li><strong>Lost card recovery</strong> — live VSP re-verification, old card voided, new card issued immediately — no trip to HQ, no downtime for the passenger.</li>
+      <li><strong>Immediate customer support</strong> — first point of contact for a passenger with a failed tap or a payment question.</li>
+    </ul>
+    <p>Every card an agent issues carries <code class="inline">issued_by_agent_id</code> — HQ can see which agent issued which card without being in the loop on the issuance itself. This is what keeps agent-issued cards accountable while the operation stays fast.</p>
+
+    <h3>Card stock accountability</h3>
+    <p>Agents are allocated a fixed number of blank cards per duty (<code class="inline">AllocateCards</code>). At shift end, <code class="inline">ReconcileShift</code> checks that <strong>issued + returned + damaged = allocated</strong> — every card is accounted for, no exceptions. Damaged cards are tracked in their own bucket so a frayed card doesn't read the same as a missing one. A mismatch doesn't get silently absorbed; the batch is flagged <code class="inline">discrepancy</code> for HQ review rather than marked reconciled.</p>
+
+    <div class="fix-box">
+      <span class="tag">Discrepancy policy — tiered, not zero-tolerance</span>
+      <p>A missing blank card isn't a security event by itself — it's inert until run through live biometric verification, so the real risk is waste or sloppy counting, not fraud. Policy: <strong>1st small discrepancy</strong> (1–2 cards) is logged and recounted, no penalty — almost always a counting error. <strong>2+ discrepancies within 30 days</strong> auto-flags the agent (<code class="inline">checkDiscrepancyPattern</code>) and blocks their next <code class="inline">AllocateCards</code> call until HQ reviews it. <strong>A pattern across shifts, or one large unexplained gap</strong> escalates to a separate investigation — that's a personnel question, not an inventory one.</p>
+    </div>
+
+    <h3>Terminal activity ping — already covered</h3>
+    <p>The device terminal's existing <code class="inline">/location</code> ping feeds <code class="inline">terminal_locations</code> — when several device terminals cluster at Tanke, that's the activity signal HQ's live map shows, feeding dead-zone detection. This is separate from and doesn't depend on agents being physically present.</p>
+  </section>
+
+  <section id="dashboard">
+    <div class="section-label">Admin surface</div>
+    <h2>Admin / GIS dashboard <span class="stack-tag alt">React + Mapbox</span></h2>
+    <p>A React web app, separate from the Flutter mobile app. It's the operator view of the session, binding, anomaly, and geo data already flowing through Postgres.</p>
+
+    <div class="admin-mockup">
+      <div class="admin-bar">
+        <div class="admin-bar-dot" style="background:#e85454"></div>
+        <div class="admin-bar-dot" style="background:#f0a830"></div>
+        <div class="admin-bar-dot" style="background:#2dcc7a"></div>
+        <span class="admin-bar-title">Ilorin Transport — Admin · Live Operations</span>
+        <span class="admin-bar-live">LIVE</span>
+      </div>
+      <div class="admin-body">
+        <div class="admin-map">
+          <div class="admin-map-grid"></div>
+          <div class="heat-zone" style="width:110px;height:110px;top:30%;left:24%"></div>
+          <div class="heat-zone" style="width:80px;height:80px;top:50%;left:52%"></div>
+          <div class="keke-dot" style="top:38%;left:28%"></div>
+          <div class="keke-dot" style="top:55%;left:48%"></div>
+          <div class="keke-dot" style="top:34%;left:62%"></div>
+          <div class="keke-dot" style="top:65%;left:23%"></div>
+          <div class="keke-dot" style="top:27%;left:55%"></div>
+          <div class="admin-map-label">Ilorin, Kwara State<br><span style="font-size:10px;">● active terminal &nbsp; ◌ heat zone</span></div>
+        </div>
+        <div class="admin-stats">
+          <div class="stat-row"><div class="stat-label">Active Keke</div><div class="stat-value green">34</div><div class="stat-sub">6 offline right now</div></div>
+          <div class="stat-row"><div class="stat-label">Trips today</div><div class="stat-value">412</div><div class="stat-sub">↑ 18% vs yesterday</div></div>
+          <div class="stat-row"><div class="stat-label">Revenue today</div><div class="stat-value green">₦82,400</div><div class="stat-sub">platform fee collected</div></div>
+          <div class="stat-row"><div class="stat-label">Avg payout time</div><div class="stat-value teal">3.2s</div><div class="stat-sub">Moniepoint NIP rails</div></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Two modes</h3>
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-label">Mode 1</div>
+        <div class="mode-title">Live operations</div>
+        <ul class="mode-items"><li>Every active vehicle as a moving dot, session status colored</li><li>Tap a dot → driver info + trips today</li><li>Dead-zone alerts — demand without supply</li><li>Breakdown detection — stationary 2h+</li><li>Failed transaction + fallback-to-cash feed</li></ul>
+      </div>
+      <div class="mode-card teal">
+        <div class="mode-label">Mode 2</div>
+        <div class="mode-title">Investor demo</div>
+        <ul class="mode-items"><li>Full-screen animated trip heatmap (Deck.gl)</li><li>Revenue counter ticking up live</li><li>Coverage growth slider, Week 1 → Week 8</li><li>Payout speed counter (avg 3.2s)</li></ul>
+      </div>
+    </div>
+
+    <h3>What it does</h3>
+    <ul>
+      <li><strong>Live map</strong> — every terminal with an active session, colored by status (active / flagged / expired).</li>
+      <li><strong>Zone overlays</strong> — geo-fenced operating zones; anomaly detection renders as a flagged marker in real time.</li>
+      <li><strong>Provisioning console</strong> — calls <code class="inline">ProvisionTerminal</code> / <code class="inline">RebindTerminal</code>, enforcing the new-driver-fingerprint step before submit.</li>
+      <li><strong>Reconciliation view</strong> — every fallback-to-cash event, since it's the one path funds don't move digitally.</li>
+    </ul>
+  </section>
+
+  <section id="flutter">
+    <div class="section-label">Driver terminal</div>
+    <h2>Flutter app structure <span class="stack-tag alt">Flutter</span></h2>
+    <p>One job per folder, mapped directly to the flows above. The app never makes a payout decision — every folder captures input, signs it, or displays state Go already resolved.</p>
+    <pre><code>transport_terminal/
+├── pubspec.yaml
+├── android/                    <span class="c-com">// NFC + biometric + location permissions</span>
+├── ios/                        <span class="c-com">// same, Info.plist entries</span>
+└── lib/
+    ├── main.dart
+    ├── core/
+    │   ├── config/              <span class="c-com">// API base URL, environment</span>
+    │   ├── constants/           <span class="c-com">// shift TTL, reverify window, retry limits</span>
+    │   ├── network/             <span class="c-com">// dio client + request signing interceptor</span>
+    │   └── security/            <span class="c-com">// device-bound key, flutter_secure_storage wrapper</span>
+    ├── data/
+    │   ├── models/              <span class="c-com">// Session, Terminal, Trip, Credential</span>
+    │   ├── repositories/        <span class="c-com">// SessionRepository, TripRepository, TerminalRepository</span>
+    │   └── datasources/
+    │       ├── remote/          <span class="c-com">// StartSession, AuthorizeTrip, Fallback</span>
+    │       └── local/           <span class="c-com">// cached fingerprint template, secure storage only</span>
+    ├── features/
+    │   ├── session/             <span class="c-com">// shift-start screen — calls StartDriverSession</span>
+    │   ├── nfc_tap/             <span class="c-com">// NFC capture, nonce generation, calls AuthorizeTrip</span>
+    │   ├── fingerprint/         <span class="c-com">// biometric capture wrapper (local_auth)</span>
+    │   ├── fallback/            <span class="c-com">// PIN → USSD → fingerprint retry UI</span>
+    │   ├── gis_tracking/        <span class="c-com">// background GPS ping, anomaly-triggered re-auth</span>
+    │   ├── vehicle_mode/        <span class="c-com">// trip-flow UI, selected by vehicle.class</span>
+    │   │   ├── keke/           <span class="c-com">// terminal-to-terminal flow</span>
+    │   │   └── feeder/         <span class="c-com">// motorcycle short-hop flow</span>
+    │   │                       <span class="c-com">// no taxi/ — that's T4 partner API, not this app</span>
+    │   ├── ops/                 <span class="c-com">// HQ-only, gated by ops login — driver onboarding</span>
+    │   │   └── new_driver/     <span class="c-com">// calls RegisterNewDriver, binds device terminal</span>
+    │   └── agent_ops/           <span class="c-com">// field-agent-only, gated by agent login</span>
+    │       ├── new_passenger/  <span class="c-com">// calls RegisterPassenger</span>
+    │       └── lost_card/      <span class="c-com">// calls ReissueCard</span>
+    ├── presentation/
+    │   ├── screens/             <span class="c-com">// ShiftStartScreen, TapScreen, FallbackScreen, StatusScreen</span>
+    │   └── widgets/             <span class="c-com">// session badge, connectivity indicator</span>
+    └── state/                   <span class="c-com">// riverpod providers</span></code></pre>
+
+    <h3>Key packages</h3>
+    <ul>
+      <li><code class="inline">nfc_manager</code> — NFC card capture</li>
+      <li><code class="inline">local_auth</code> — device fingerprint sensor</li>
+      <li><code class="inline">flutter_secure_storage</code> — cached template + device key, never plain prefs</li>
+      <li><code class="inline">geolocator</code> + <code class="inline">flutter_background_service</code> — GIS ping loop, works backgrounded</li>
+      <li><code class="inline">dio</code> — HTTP client, signing interceptor in <code class="inline">core/network</code></li>
+      <li><code class="inline">flutter_riverpod</code> — session/connectivity state</li>
+    </ul>
+
+    <div class="fix-box"><span class="tag">Why nonce generation lives client-side</span><p>The <code class="inline">nfc_tap</code> feature signs each nonce with the device-bound key before sending — a cloned request without the real key's signature gets rejected, even if it copies a nonce value.</p></div>
+
+    <h3>One app, not three</h3>
+    <p>Identity, session, device binding, the signed nonce, and fallback chain are identical across vehicle classes — forking them per vehicle would put the most security-sensitive code in multiple places. Only the trip-flow UI branches, via <code class="inline">vehicle.class</code>. Taxi gets no first-party UI here — per the T4 plan, taxi drivers stay on their existing partner app; this system only supplies identity verification behind the scenes.</p>
+  </section>
+
+  <section id="roadmap">
+    <div class="section-label">Sequencing</div>
+    <h2>Build roadmap</h2>
+    <p>Each stop is a shippable state. Stack called out per phase so nothing gets built out of order.</p>
+
+    <div class="route">
+      <div class="stop" id="phase0">
+        <div class="stop-code">TERMINAL 0</div><h3>Foundation fixes</h3>
+        <div class="stop-meta">Before any new feature work</div>
+        <div class="stop-body">
+          <ul>
+            <li>Finish Postgres migration off in-memory storage; enable PostGIS.</li>
+            <li>Add <code class="inline">session</code> table + shift-start auth (fix 1).</li>
+            <li>Add <code class="inline">terminal.hardware_serial</code> + <code class="inline">bound_driver_identity_id</code> (fix 2).</li>
+            <li>Nonce table + replay check on the trip authorization endpoint.</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">Go + Gin</span><span class="stack-chip">PostgreSQL + PostGIS</span></div>
+        </div>
+      </div>
+
+      <div class="stop" id="phase1">
+        <div class="stop-code">TERMINAL 1</div><h3>Ilorin Keke MVP</h3>
+        <div class="stop-meta">Single vehicle class, single corridor, real money moving</div>
+        <div class="stop-body">
+          <ul>
+            <li>Passenger enrollment via VSP + Moniepoint account link.</li>
+            <li>First Flutter build — NFC tap, fingerprint capture, session start screen.</li>
+            <li>Device terminals: budget Android phones (NFC + fingerprint built in) mounted on pilot Kekes.</li>
+            <li>2–3 field agents deployed at the pilot corridor's terminal locations, running <code style="font-family:var(--font-mono);color:var(--teal);">agent_ops/</code> — registers passengers and reissues lost cards on the spot.</li>
+            <li>HQ dashboard live in monitoring mode — driver positions, session status — plus the <code style="font-family:var(--font-mono);color:var(--teal);">ops/</code> new-driver flow.</li>
+            <li>Fallback chain live end to end.</li>
+            <li>Pilot route: Tanke ↔ Challenge corridor, 10–20 device terminals.</li>
+            <li><strong>Success metric:</strong> a driver runs a full day cash-free with a clean trip ledger.</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">Flutter</span><span class="stack-chip">Go + Gin</span><span class="stack-chip">Moniepoint</span></div>
+        </div>
+      </div>
+
+      <div class="stop" id="phase2">
+        <div class="stop-code">TERMINAL 2</div><h3>Terminal network + dashboard v1</h3>
+        <div class="stop-meta">Structured routes, first real GIS surface, USSD</div>
+        <div class="stop-body">
+          <ul>
+            <li>Formal terminal/geo-fence entities; entry/exit captured per trip.</li>
+            <li>React + Mapbox dashboard v1 — live map, session status, provisioning console.</li>
+            <li>USSD via Africa's Talking — balance check, account linking for non-smartphone users.</li>
+            <li>Expand to 5 major corridors — Fate Road, Offa Garage, Kulende, Asa Dam.</li>
+            <li>Reconciliation view for fallback/cash events.</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">React</span><span class="stack-chip">Mapbox/Leaflet</span><span class="stack-chip">Go + Gin</span></div>
+        </div>
+      </div>
+
+      <div class="stop" id="phase3">
+        <div class="stop-code">TERMINAL 3</div><h3>Feeder layer + investor mode</h3>
+        <div class="stop-meta">Motorcycles join, dashboard gets an investor-facing surface</div>
+        <div class="stop-body">
+          <ul>
+            <li>Same Flutter app, same identity/session/binding model — new vehicle class only.</li>
+            <li>Multi-leg journeys: home → local terminal (bike) → main terminal (keke), linked as one journey.</li>
+            <li>Deck.gl heatmap + revenue ticker + coverage growth slider — investor demo mode.</li>
+            <li>Formal Keke cooperative onboarding; grant applications (Tony Elumelu, GIZ, NITDA).</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">Flutter</span><span class="stack-chip">Deck.gl</span><span class="stack-chip">Go + Gin</span></div>
+        </div>
+      </div>
+
+      <div class="stop" id="phase4">
+        <div class="stop-code">TERMINAL 4</div><h3>Partner integration + BRT</h3>
+        <div class="stop-meta">Taxi/bus operators connect in — only once T1–T3 have real numbers</div>
+        <div class="stop-body">
+          <ul>
+            <li>Expose identity verification + terminal binding as a public API; partners keep their own passenger app and pricing.</li>
+            <li>BRT integration — same backend, <code class="inline">terminal_type='bus'</code>, payout to company account.</li>
+            <li>Route planning layer — OpenStreetMap + OSRM.</li>
+            <li>World Bank MOBILIST, IFC, BOI institutional funding round.</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">Go + Gin (public API)</span></div>
+        </div>
+      </div>
+
+      <div class="stop" id="phase5">
+        <div class="stop-code">TERMINAL 5</div><h3>City mobility OS</h3>
+        <div class="stop-meta">Multi-city, full intelligence layer</div>
+        <div class="stop-body">
+          <ul>
+            <li>Multi-city expansion on the same architecture — abstracted payment rails and modular localization from T1 pay off here.</li>
+            <li>Dashboard grows into investigation/emergency-response tooling on the existing trip ledger.</li>
+            <li>Direct NIMC accreditation worth pursuing once volume justifies it over the VSP.</li>
+            <li>Custom device terminal hardware (ESP32/RPi + PN532 + fingerprint module) worth evaluating once device cost at this scale outweighs the R&amp;D to build it.</li>
+          </ul>
+          <div class="stop-stack"><span class="stack-chip">Full stack, multi-region</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="security">
+    <div class="section-label">Fill the loopholes early</div>
+    <h2>Security checklist</h2>
+    <p>Organized by the phase each item belongs to — most security debt gets expensive precisely because it's added after the fact. Items you already have designed (session model, device binding, replay protection) aren't repeated here; this is everything <em>around</em> that core.</p>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T0</span><span class="sec-phase-name">Foundation — before any feature code</span></div>
+      <ul class="checklist">
+        <li>TLS on every connection — Flutter↔Go, Go↔Moniepoint/VSP, and the Postgres connection string itself, no exceptions</li>
+        <li>Secrets (Moniepoint keys, VSP credentials, DB creds) in environment variables or a secrets manager — never in source control</li>
+        <li>Postgres service account for the Go API uses <strong>least privilege</strong> — not a superuser role, scoped to the tables it needs</li>
+        <li>All queries parameterized — no string-concatenated SQL, ever (Go's <code class="inline">database/sql</code> placeholders or your ORM's query builder, never raw interpolation)</li>
+        <li>Structured logging that <strong>redacts</strong> sensitive fields — biometric hashes, tokens, and account numbers never hit plaintext logs</li>
+        <li>Separate credentials for sandbox vs. production — a leaked sandbox key should never be able to touch real money</li>
+        <li>Nonce table + audit log table designed now, not bolted on later</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T1</span><span class="sec-phase-name">MVP — real money, real biometrics</span></div>
+      <ul class="checklist">
+        <li>Raw fingerprint scans discarded immediately after hashing — never written to disk or logs, even temporarily</li>
+        <li>VSP and Moniepoint calls wired behind interfaces (<code class="inline">IdentityVerifier</code>, <code class="inline">PaymentProcessor</code>) via dependency injection — lets you test failure modes (timeout, rejected verification, double-spend attempt) without hitting real services</li>
+        <li><strong>Moniepoint webhook signature verification</strong> — if you consume webhooks for settlement confirmation, verify the HMAC signature on every incoming webhook or you're trusting unauthenticated POST requests to confirm real payments</li>
+        <li>Idempotency keys on every Moniepoint call (trip_id + timestamp) — already in your pseudocode, don't skip it under deadline pressure</li>
+        <li>Gin binding + validation tags on every request struct — reject malformed input at the handler boundary, before it reaches business logic</li>
+        <li>Rate limiting on <code class="inline">/tap</code> and <code class="inline">/location</code> — per-terminal and per-IP, so one compromised device can't hammer the API</li>
+        <li>Dependency vulnerability scanning in CI — <code class="inline">go mod audit</code> equivalent (govulncheck), <code class="inline">flutter pub outdated</code> / audit for Dart packages</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T2</span><span class="sec-phase-name">Terminal network + admin dashboard</span></div>
+      <ul class="checklist">
+        <li>Admin auth is <strong>stronger</strong> than driver session auth — this console can rebind terminals and see the full trip ledger</li>
+        <li>Role-based access on the dashboard — ops vs. super-admin, since rebind and reconciliation actions shouldn't be available to every logged-in staff member</li>
+        <li>Two-factor authentication on admin accounts specifically</li>
+        <li>CORS locked down on the Go API — only the admin dashboard's actual origin, not a wildcard</li>
+        <li>CSRF protection on the React dashboard if using cookie-based sessions (or stick to bearer tokens in headers to sidestep it)</li>
+        <li>Audit log extended to <strong>every</strong> privileged action, not just terminal rebinds — who did what, when, from where</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T3</span><span class="sec-phase-name">Feeder layer + investor mode</span></div>
+      <ul class="checklist">
+        <li>Key rotation policy for device-bound signing keys — define how a terminal's key gets rotated without a full re-provisioning trip</li>
+        <li>Error tracking + alerting wired up (Sentry or similar) — you want to know about failed verifications and rollbacks before a driver complains</li>
+        <li>NDPR data protection impact assessment formalized in writing, not just "we thought about it" — this is the point where you have real biometric data at real volume</li>
+        <li>Anomaly detection thresholds tuned per vehicle class, reviewed against real false-positive rates from T1–T2 usage</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T4</span><span class="sec-phase-name">Partner integration — now genuinely public-facing</span></div>
+      <ul class="checklist">
+        <li>Partner API uses its own auth scheme (API keys or OAuth client credentials) — separate from driver/passenger session tokens entirely</li>
+        <li>Per-partner rate limiting and usage quotas — one partner's traffic spike shouldn't degrade the whole platform</li>
+        <li>WAF / DDoS protection in front of the public API — you're no longer a closed system only your own app talks to</li>
+        <li><strong>Third-party penetration test</strong> before opening the partner API — internal review isn't enough once external code calls your endpoints</li>
+        <li>Incident response plan written down — key rotation steps, session mass-invalidation procedure, who gets notified and when if a breach is suspected</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">T5</span><span class="sec-phase-name">City OS — full compliance posture</span></div>
+      <ul class="checklist">
+        <li>Backup and disaster recovery tested for real — point-in-time Postgres recovery drills, not just "backups are configured"</li>
+        <li>Data retention and right-to-erasure policy — NDPR requires you can actually delete a person's data on request, not just deactivate their account</li>
+        <li>Regular third-party security audits on a schedule, not one-and-done</li>
+        <li>Multi-region security posture reviewed as each new city comes online — don't assume T1's threat model still covers a 5-city footprint</li>
+      </ul>
+    </div>
+
+    <h3>Cutting across every phase</h3>
+    <ul class="checklist cross">
+      <li><strong>Dependency injection</strong> for every external integration (VSP, Moniepoint, even Postgres access behind a repository interface) — this is what makes the rest of this checklist actually testable instead of aspirational</li>
+      <li><strong>Least privilege</strong> everywhere — database roles, admin permissions, API scopes — default to no access, grant narrowly</li>
+      <li><strong>No secrets in git</strong>, checked by a pre-commit hook or CI scan, not just a policy people remember to follow</li>
+      <li><strong>Logs redact sensitive fields</strong> by default — build the redaction into your logging middleware once, not per-endpoint</li>
+    </ul>
+  </section>
+
+  <section id="tracker">
+    <div class="section-label">Work through it, don't just read it</div>
+    <h2>Security tracker</h2>
+    <p>Same items as the security checklist above, plus the open gaps section below, all checkable — your progress is saved automatically and will still be here next time you open this file. Check things off as you actually implement them, not as you plan to.</p>
+
+    <div class="tracker-overall">
+      <div class="tracker-overall-top">
+        <span class="tracker-overall-label">Overall progress</span>
+        <span class="tracker-overall-count" id="overall-count">0 / 0</span>
+      </div>
+      <div class="tracker-bar"><div class="tracker-bar-fill" id="overall-bar"></div></div>
+    </div>
+
+    <div id="tracker-phases"></div>
+    <button class="tracker-reset" id="tracker-reset">Reset all progress</button>
+    <p class="tracker-note">Saved to this file's own storage — separate from any other artifact. If it ever fails to save, your checks still work for the session, just won't persist on reload.</p>
+  </section>
+
+  <script>
+  (function(){
+    const DATA = [
+      { phase: "T0", name: "Foundation", items: [
+        ["t0-tls","TLS on every connection — Flutter↔Go, Go↔Moniepoint/VSP, and the Postgres connection string"],
+        ["t0-secrets","Secrets in env vars / secrets manager — never in source control"],
+        ["t0-dbrole","Least-privilege Postgres role for the Go API, not superuser"],
+        ["t0-params","All queries parameterized — no string-concatenated SQL"],
+        ["t0-logs","Structured logging that redacts sensitive fields"],
+        ["t0-envsep","Separate credentials for sandbox vs. production"],
+        ["t0-noncetable","Nonce table + audit log table designed up front"],
+      ]},
+      { phase: "T1", name: "MVP", items: [
+        ["t1-rawscan","Raw fingerprint scans discarded immediately after hashing"],
+        ["t1-di","VSP and Moniepoint calls wired behind injected interfaces"],
+        ["t1-webhook","Moniepoint webhook signature verification"],
+        ["t1-idempotency","Idempotency keys on every Moniepoint call"],
+        ["t1-validation","Gin binding + validation tags on every request struct"],
+        ["t1-ratelimit","Rate limiting on /tap and /location"],
+        ["t1-vulnscan","Dependency vulnerability scanning (govulncheck, pub audit)"],
+      ]},
+      { phase: "T2", name: "Terminal network + dashboard", items: [
+        ["t2-adminauth","Admin auth stronger than driver session auth"],
+        ["t2-rbac","Role-based access — ops vs. super-admin"],
+        ["t2-2fa","Two-factor authentication on admin accounts"],
+        ["t2-cors","CORS locked to the dashboard's real origin"],
+        ["t2-csrf","CSRF protection (or bearer tokens instead of cookies)"],
+        ["t2-audit","Audit log extended to every privileged action"],
+      ]},
+      { phase: "T3", name: "Feeder layer + investor mode", items: [
+        ["t3-keyrotation","Key rotation policy for device-bound signing keys"],
+        ["t3-alerting","Error tracking + alerting wired up"],
+        ["t3-dpia","NDPR data protection impact assessment written"],
+        ["t3-anomaly","Anomaly thresholds tuned against real false-positive rates"],
+      ]},
+      { phase: "T4", name: "Partner integration", items: [
+        ["t4-partnerauth","Partner API uses its own auth scheme, separate from driver/passenger tokens"],
+        ["t4-quotas","Per-partner rate limiting and usage quotas"],
+        ["t4-waf","WAF / DDoS protection in front of the public API"],
+        ["t4-pentest","Third-party penetration test completed"],
+        ["t4-incident","Incident response plan written down"],
+      ]},
+      { phase: "T5", name: "City OS", items: [
+        ["t5-backup","Backup and disaster recovery tested with real drills"],
+        ["t5-retention","Data retention and right-to-erasure policy in place"],
+        ["t5-audits","Regular third-party security audits scheduled"],
+        ["t5-multiregion","Security posture re-reviewed per new city"],
+      ]},
+      { phase: "ALL", name: "Cutting across every phase", items: [
+        ["x-di","Dependency injection on every external integration"],
+        ["x-leastpriv","Least privilege everywhere — DB, admin, API scopes"],
+        ["x-nosecrets","No secrets in git, enforced by a pre-commit / CI scan"],
+        ["x-redact","Logs redact sensitive fields by default, via middleware"],
+      ]},
+      { phase: "GAP", name: "Open gaps — beyond the architecture", items: [
+        ["g-offline","Flutter app queues signed trips offline, syncs on reconnect"],
+        ["g-nonce-delay","Replay logic tolerates delayed submission, not just live taps"],
+        ["g-cbn","CBN licensing category confirmed with an actual legal read"],
+        ["g-legal-docs","Terms of service, privacy policy, dispute/refund policy written"],
+        ["g-agent-onboard","Agent onboarding and accountability process defined"],
+        ["g-agent-logistics","Card batch allocation + shift reconciliation built (designed — see AllocateCards / ReconcileShift)"],
+        ["g-agent-device","Agent enrollment device chosen"],
+        ["g-agent-visibility","Agent performance visible on the HQ dashboard"],
+        ["g-integration-tests","Integration tests for the full tap→debit→payout chain"],
+        ["g-load-tests","Load testing for simultaneous rush-hour taps"],
+        ["g-device-tests","Device testing across real cheap Android hardware"],
+        ["g-fare-engine","Fare table replacing the flat ₦200 rate before T2"],
+        ["g-settlement","Daily settlement reports built"],
+        ["g-payout-statements","Driver payout statements a driver can read"],
+        ["g-tax","Tax/reporting obligations on platform fee income identified"],
+        ["g-broken-terminal","Process for a broken terminal mid-shift"],
+        ["g-escalation","Escalation path beyond the agent for unresolved disputes"],
+      ]},
+    ];
+
+    const STORAGE_KEY = "security-tracker-state";
+    let state = {};
+
+    async function loadState(){
+      try{
+        const result = await window.storage.get(STORAGE_KEY);
+        if(result && result.value){ state = JSON.parse(result.value); }
+      }catch(e){ state = {}; }
+      render();
+    }
+
+    async function saveState(){
+      try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state)); }
+      catch(e){ /* session-only fallback, no persistence */ }
+    }
+
+    function toggle(id){
+      state[id] = !state[id];
+      render();
+      saveState();
+    }
+
+    async function resetAll(){
+      state = {};
+      await (async()=>{ try{ await window.storage.delete(STORAGE_KEY); }catch(e){} })();
+      render();
+    }
+
+    function render(){
+      const container = document.getElementById("tracker-phases");
+      container.innerHTML = "";
+      let totalDone = 0, totalItems = 0;
+
+      DATA.forEach(group => {
+        totalItems += group.items.length;
+        const doneCount = group.items.filter(([id]) => state[id]).length;
+        totalDone += doneCount;
+
+        const phaseEl = document.createElement("div");
+        phaseEl.className = "tracker-phase";
+        phaseEl.innerHTML = `
+          <div class="tracker-phase-head">
+            <span class="sec-phase-code">${group.phase}</span>
+            <span class="sec-phase-name">${group.name}</span>
+            <span class="tracker-phase-progress">${doneCount} / ${group.items.length}</span>
+          </div>
+          <div class="tracker-items"></div>
+        `;
+        const itemsEl = phaseEl.querySelector(".tracker-items");
+        group.items.forEach(([id, text]) => {
+          const checked = !!state[id];
+          const itemEl = document.createElement("div");
+          itemEl.className = "tracker-item" + (checked ? " done" : "");
+          itemEl.innerHTML = `<span class="tracker-checkbox${checked ? " checked" : ""}"></span><span class="tracker-text">${text}</span>`;
+          itemEl.addEventListener("click", () => toggle(id));
+          itemsEl.appendChild(itemEl);
+        });
+        container.appendChild(phaseEl);
+      });
+
+      document.getElementById("overall-count").textContent = `${totalDone} / ${totalItems}`;
+      document.getElementById("overall-bar").style.width = totalItems ? `${(totalDone/totalItems)*100}%` : "0%";
+    }
+
+    document.getElementById("tracker-reset").addEventListener("click", resetAll);
+    loadState();
+  })();
+  </script>
+
+  <section id="gaps">
+    <div class="section-label">Beyond the architecture</div>
+    <h2>Open gaps</h2>
+    <p>The technical scope is solid. These are the things that don't show up in a schema diagram but will stall a launch if left until the last minute.</p>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Offline resilience</span></div>
+      <ul class="checklist">
+        <li>Flutter app queues signed trip requests locally when offline, syncs on reconnect</li>
+        <li>Nonce/replay logic tolerates delayed submission, not just live taps</li>
+        <li>Design this before T1 ships — retrofitting later means touching almost every part of the tap flow</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Legal &amp; regulatory</span></div>
+      <ul class="checklist">
+        <li>Confirm CBN Payment Service Provider licensing category for a routing-only, zero-custody platform — with an actual legal read, not just architectural reasoning</li>
+        <li>Terms of service and a privacy policy matching your real NDPR posture</li>
+        <li>Written dispute/refund policy — what happens when a passenger claims a double charge</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Agent network operations</span></div>
+      <ul class="checklist">
+        <li>Agent onboarding and accountability process — separate from HQ staff, separate from drivers</li>
+        <li>Card batch allocation + shift reconciliation implemented — designed (<code class="inline">AllocateCards</code> / <code class="inline">ReconcileShift</code>), not yet built</li>
+        <li>Agent enrollment device — hardware choice deferred, to be decided</li>
+        <li>Agent performance visibility on the HQ dashboard — cards issued, response time, coverage per terminal location</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Testing strategy</span></div>
+      <ul class="checklist">
+        <li>Integration tests for the full tap → debit → payout chain, not just unit tests on individual functions</li>
+        <li>Load testing — simultaneous taps during rush hour, not just sequential requests</li>
+        <li>Device testing across the actual range of cheap Android hardware drivers will own</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Fare engine</span></div>
+      <ul class="checklist">
+        <li>Move off a flat ₦200 fare before multi-corridor expansion (T2) — route or distance-band based fare table</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Financial reconciliation &amp; reporting</span></div>
+      <ul class="checklist">
+        <li>Daily settlement reports</li>
+        <li>Driver payout statements a driver can actually read</li>
+        <li>Tax/reporting obligations on platform fee income identified and tracked</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Support &amp; operations</span></div>
+      <ul class="checklist">
+        <li>Process for a broken terminal mid-shift — driver's actual next step</li>
+        <li>Escalation path beyond the agent — who a passenger reaches for a dispute the agent can't resolve</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="funding">
+    <div class="section-label">Capital plan</div>
+    <h2>Funding targets</h2>
+    <table class="funding-table">
+      <tr><td>T0–T1</td><td>Self-funded / friends &amp; family — 20 scanners, SIM, NFC cards, servers</td><td>₦300k–500k</td></tr>
+      <tr><td>T2–T3</td><td>Tony Elumelu, GIZ, NITDA grants — working pilot data is the application</td><td>$5k–20k</td></tr>
+      <tr><td>T4</td><td>World Bank MOBILIST, IFC, BOI — scale requires a balance-sheet partner</td><td>$100k+</td></tr>
+      <tr><td>T5</td><td>Series A / strategic partnership</td><td>$500k+</td></tr>
+    </table>
+  </section>
+
+</main>
+
+<footer>
+  Transport Intelligence System — Master Build Reference · Go/Gin · PostgreSQL + PostGIS · Moniepoint · Flutter · React + Mapbox + Deck.gl
+</footer>
+
+</body>
+</html>
