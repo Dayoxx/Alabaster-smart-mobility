@@ -1,138 +1,117 @@
 package main
 
 import (
+	"log"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"transportation/internal/db"
+	"transportation/internal/models"
+	"transportation/internal/repository"
 )
 
-// user structure
-type User struct {
-	ID        string    `json:"id"`
-	Phone     string    `json:"phone"`
-	FullName  string    `json:"full_name"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
+type App struct {
+	Users     repository.UserRepository
+	Accounts  repository.PassengerAccountRepository
+	Terminals repository.TerminalRepository
+	Trips     repository.TripRepository
 }
 
-// passenger structure
-type PassengerAccount struct {
-	ID            string `json:"id"`
-	PassengerID   string `json:"passenger_id"`
-	AccountNumber string `json:"account_number"`
-	BankCode      string `json:"bank_code"`
-	BankName      string `json:"bank_name"`
-	PriorityOrder int    `json:"priority_order"`
-	IsActive      bool   `json:"is_active"`
-}
-
-// trip structure
-type Trip struct {
-	ID           string    `json:"id"`
-	PassengerID  string    `json:"passenger_id"`
-	DriverID     string    `json:"driver_id"`
-	TerminalID   string    `json:"terminal_id"`
-	FareAmount   float64   `json:"fare_amount"`
-	DriverPayout float64   `json:"driver_payout"`
-	PlatformFee  float64   `json:"platform_fee"`
-	PickupLat    float64   `json:"pickup_lat"`
-	PickupLng    float64   `json:"pickup_lng"`
-	Status       string    `json:"status"`
-	TappedAt     time.Time `json:"tapped_at"`
-}
-
-type Terminal struct {
-	ID           string    `json:"id"`
-	DriverID     string    `json:"driver_id"`
-	DeviceSerial string    `json:"device_serial"`
-	VehiclePlate string    `json:"vehicle_plate"`
-	TerminalType string    `json:"terminal_type"` // "keke", "bus", "ferry", "train", "plane", "tram", "monorail"
-	LastLat      float64   `json:"last_lat"`
-	LastLng      float64   `json:"last_lng"`
-	LastSeenAt   time.Time `json:"last_seen_at"`
-	IsActive     bool      `json:"is_active"`
-}
-
-// user value, passenger value, trip value
-var Users = []User{}
-var Passengers = []PassengerAccount{}
-var Trips = []Trip{}
-var Terminals = []Terminal{}
-
-// main function server
 func main() {
-	router := gin.Default()
+	conn, err := db.NewPostgresDB()
+	if err != nil {
+		log.Fatalf("failed to connect to postgres: %v", err)
+	}
+	defer conn.Close()
 
-	router.POST("/register", registerHandler)        // filled
-	router.POST("/link-account", linkAccountHandler) // filled
-	router.POST("/tap", tapHandler)
-	router.GET("/trips", tripsHandler)         //filled
-	router.POST("/terminals", TerminalHandler) //filled
-	router.Run(":8080")
+	app := &App{
+		Users:     repository.NewPostgresUserRepository(conn),
+		Accounts:  repository.NewPostgresPassengerAccountRepository(conn),
+		Terminals: repository.NewPostgresTerminalRepository(conn),
+		Trips:     repository.NewPostgresTripRepository(conn),
+	}
+
+	router := gin.Default()
+	router.POST("/register", app.registerHandler)
+	router.POST("/link-account", app.linkAccountHandler)
+	router.POST("/tap", app.tapHandler)
+	router.GET("/trips", app.tripsHandler)
+	router.POST("/terminals", app.terminalHandler)
+
+	mux := http.NewServeMux()
+	mux.Handle("/", router)
+
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 16,
+	}
+
+	log.Printf("listening on %s", srv.Addr)
+	log.Fatal(srv.ListenAndServe())
 }
 
-// register handler function
-func registerHandler(c *gin.Context) {
+func (app *App) registerHandler(c *gin.Context) {
 	var input struct {
 		Phone    string `json:"phone" binding:"required"`
 		FullName string `json:"full_name" binding:"required"`
 		Role     string `json:"role" binding:"required"`
 	}
-
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	//create a new user and append to the Users slice
-	eachUser := User{
-		ID:        uuid.New().String(),
-		Phone:     input.Phone,
-		FullName:  input.FullName,
-		Role:      input.Role,
-		CreatedAt: time.Now(),
-	}
 
-	Users = append(Users, eachUser)
-	c.JSON(http.StatusCreated, eachUser)
+	newUser := models.User{
+		ID: uuid.New().String(), Phone: input.Phone, FullName: input.FullName,
+		Role: input.Role, CreatedAt: time.Now(),
+	}
+	saved, err := app.Users.Create(c.Request.Context(), newUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create user"})
+		return
+	}
+	c.JSON(http.StatusCreated, saved)
 }
 
-func linkAccountHandler(c *gin.Context) {
+func (app *App) linkAccountHandler(c *gin.Context) {
 	var input struct {
 		PassengerID   string `json:"passenger_id" binding:"required"`
 		AccountNumber string `json:"account_number" binding:"required"`
 		BankCode      string `json:"bank_code" binding:"required"`
 		BankName      string `json:"bank_name" binding:"required"`
 	}
-
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	existingCount := 0
-	for _, passenger := range Passengers {
-		if passenger.PassengerID == input.PassengerID {
-			existingCount++
-		}
-	}
-	//create a new passenger and append to the Passengers slice
-	newAccount := PassengerAccount{
-		ID:            uuid.New().String(),
-		PassengerID:   input.PassengerID,
-		AccountNumber: input.AccountNumber,
-		BankCode:      input.BankCode,
-		BankName:      input.BankName,
-		PriorityOrder: existingCount + 1, // next in line
-		IsActive:      true,
+
+	existingCount, err := app.Accounts.CountByPassenger(c.Request.Context(), input.PassengerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check existing accounts"})
+		return
 	}
 
-	Passengers = append(Passengers, newAccount)
-	c.JSON(http.StatusCreated, newAccount)
+	newAccount := models.PassengerAccount{
+		ID: uuid.New().String(), PassengerID: input.PassengerID, AccountNumber: input.AccountNumber,
+		BankCode: input.BankCode, BankName: input.BankName, PriorityOrder: existingCount + 1, IsActive: true,
+	}
+	saved, err := app.Accounts.Create(c.Request.Context(), newAccount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not link account"})
+		return
+	}
+	c.JSON(http.StatusCreated, saved)
 }
 
-func tapHandler(c *gin.Context) {
+func (app *App) tapHandler(c *gin.Context) {
 	var input struct {
 		PassengerID string  `json:"passenger_id" binding:"required"`
 		TerminalID  string  `json:"terminal_id" binding:"required"`
@@ -140,128 +119,98 @@ func tapHandler(c *gin.Context) {
 		Lat         float64 `json:"lat"`
 		Lng         float64 `json:"lng"`
 	}
-
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	//find the terminal to get the driver ID and terminal type
-	var terminal *Terminal
-	for i := range Terminals {
-		if Terminals[i].ID == input.TerminalID {
-			terminal = &Terminals[i]
-			break
-		}
-	}
 
+	terminal, err := app.Terminals.FindByID(c.Request.Context(), input.TerminalID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not look up terminal"})
+		return
+	}
 	if terminal == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "terminal not found"})
 		return
 	}
-	//
-	var PassengerAccounts []PassengerAccount
-	for _, acc := range Passengers {
-		if acc.PassengerID == input.PassengerID && acc.IsActive {
-			PassengerAccounts = append(PassengerAccounts, acc)
-		}
-	}
-	sort.Slice(PassengerAccounts, func(i, j int) bool {
-		return PassengerAccounts[i].PriorityOrder < PassengerAccounts[j].PriorityOrder
-	})
 
-	if len(PassengerAccounts) == 0 {
+	accounts, err := app.Accounts.FindActiveByPassenger(c.Request.Context(), input.PassengerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not look up passenger accounts"})
+		return
+	}
+	if len(accounts) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "passenger has no linked accounts"})
 		return
 	}
-	// 3. Simulate trying each account until one "succeeds"
-	//    (Moniepoint call goes here later — for now, first account always works)
-	usedAccount := PassengerAccounts[0]
+	usedAccount := accounts[0]
 
-	// 4. Calculate the split
 	platformFee := input.Amount * 0.05
 	driverPayout := input.Amount - platformFee
 
-	// 5. Build and save the trip
-	newTrip := Trip{
-		ID:           uuid.New().String(),
-		PassengerID:  input.PassengerID,
-		DriverID:     terminal.DriverID,
-		TerminalID:   input.TerminalID,
-		FareAmount:   input.Amount,
-		DriverPayout: driverPayout,
-		PlatformFee:  platformFee,
-		PickupLat:    input.Lat,
-		PickupLng:    input.Lng,
-		Status:       "success",
-		TappedAt:     time.Now(),
+	newTrip := models.Trip{
+		ID: uuid.New().String(), PassengerID: input.PassengerID, DriverID: terminal.DriverID,
+		TerminalID: input.TerminalID, FareAmount: input.Amount, DriverPayout: driverPayout,
+		PlatformFee: platformFee, PickupLat: input.Lat, PickupLng: input.Lng,
+		Status: "success", TappedAt: time.Now(),
+	}
+	saved, err := app.Trips.Create(c.Request.Context(), newTrip)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save trip"})
+		return
 	}
 
-	Trips = append(Trips, newTrip)
-
-	c.JSON(http.StatusCreated, gin.H{
-		"trip":          newTrip,
-		"paid_from":     usedAccount.BankName,
-		"driver_payout": driverPayout,
-	})
+	c.JSON(http.StatusCreated, gin.H{"trip": saved, "paid_from": usedAccount.BankName, "driver_payout": driverPayout})
 }
 
-// tripsHandler handles the GET /trips endpoint to retrieve all trips.
-func tripsHandler(c *gin.Context) {
-	passengerID := c.Query("passenger_id")
-	driverID := c.Query("driver_id")
-
-	var result []Trip
-	for _, t := range Trips {
-		if (passengerID != "" && t.PassengerID == passengerID) ||
-			(driverID != "" && t.DriverID == driverID) {
-			result = append(result, t)
-		}
+func (app *App) tripsHandler(c *gin.Context) {
+	trips, err := app.Trips.FindByPassengerOrDriver(c.Request.Context(), c.Query("passenger_id"), c.Query("driver_id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch trips"})
+		return
 	}
-
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, trips)
 }
-func TerminalHandler(c *gin.Context) {
+
+func (app *App) terminalHandler(c *gin.Context) {
 	var input struct {
-		ID           string    `json:"id"`
-		DriverID     string    `json:"driver_id"`
-		DeviceSerial string    `json:"device_serial"`
-		VehiclePlate string    `json:"vehicle_plate"`
-		TerminalType string    `json:"terminal_type"` // "keke", "bus", "ferry", "train", "plane", "tram", "monorail"
-		LastLat      float64   `json:"last_lat"`
-		LastLng      float64   `json:"last_lng"`
-		LastSeenAt   time.Time `json:"last_seen_at"`
-		IsActive     bool      `json:"is_active"`
+		DriverID     string  `json:"driver_id" binding:"required"`
+		DeviceSerial string  `json:"device_serial" binding:"required"`
+		VehiclePlate string  `json:"vehicle_plate" binding:"required"`
+		TerminalType string  `json:"terminal_type" binding:"required"`
+		LastLat      float64 `json:"last_lat"`
+		LastLng      float64 `json:"last_lng"`
 	}
-	// Bind the JSON input to the struct
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	validTypes := map[string]bool{"keke": true, "bus": true, "ferry": false, "train": false, "plane": false, "tram": false, "monorail": false}
+
+	validTypes := map[string]bool{"keke": true, "bus": true}
 	if !validTypes[input.TerminalType] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "terminal_type must be keke or bus"})
 		return
 	}
 
-	for _, terminal := range Terminals {
-		if terminal.TerminalType == input.TerminalType {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "device_serial already registered"})
-			return
-		}
+	existing, err := app.Terminals.FindByDeviceSerial(c.Request.Context(), input.DeviceSerial)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check existing terminals"})
+		return
+	}
+	if existing != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "device_serial already registered"})
+		return
 	}
 
-	Terminalcheck := Terminal{
-		ID:           uuid.New().String(),
-		DriverID:     input.DriverID,
-		DeviceSerial: input.DeviceSerial,
-		VehiclePlate: input.VehiclePlate,
-		TerminalType: input.TerminalType,
-		LastLat:      input.LastLat,
-		LastLng:      input.LastLng,
-		LastSeenAt:   time.Now(),
-		IsActive:     true,
+	newTerminal := models.Terminal{
+		ID: uuid.New().String(), DriverID: input.DriverID, DeviceSerial: input.DeviceSerial,
+		VehiclePlate: input.VehiclePlate, TerminalType: input.TerminalType,
+		LastLat: input.LastLat, LastLng: input.LastLng, LastSeenAt: time.Now(), IsActive: true,
 	}
-
-	Terminals = append(Terminals, Terminalcheck)
-	c.JSON(http.StatusCreated, Terminalcheck)
+	saved, err := app.Terminals.Create(c.Request.Context(), newTerminal)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create terminal"})
+		return
+	}
+	c.JSON(http.StatusCreated, saved)
 }
