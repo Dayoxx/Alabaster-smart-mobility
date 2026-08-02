@@ -184,6 +184,11 @@
   .checklist li strong{color:var(--text);}
   .checklist.cross li::before{color:var(--teal);}
   .sec-phase{border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:16px;}
+  .layer-status{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;margin-left:auto;}
+  .layer-status.covered{background:rgba(45,204,122,.15);color:var(--green);}
+  .layer-status.partial{background:rgba(242,169,59,.15);color:var(--amber);}
+  .layer-status.gap{background:rgba(228,104,93,.15);color:var(--danger);}
+  .layer-num{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);}
   .sec-phase-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
   .sec-phase-code{font-family:var(--font-mono);font-size:11px;color:var(--amber);letter-spacing:.08em;background:var(--bg-panel);border:1px solid var(--line-bright);border-radius:4px;padding:3px 9px;}
   .sec-phase-name{font-size:14px;font-weight:600;color:var(--text);}
@@ -231,18 +236,22 @@
 
 <nav>
   <a href="#stack">Stack</a>
+  <a href="#app-structure">One App, Three Logins</a>
   <a href="#learning">Learning</a>
   <a href="#revenue">Revenue</a>
   <a href="#fix">Session Fix</a>
   <a href="#binding">Device Binding</a>
   <a href="#schema">Data Model</a>
+  <a href="#fare-engine">Fare Engine</a>
   <a href="#payment">Payment Flow</a>
+  <a href="#hce">Phone Tap (HCE)</a>
   <a href="#geospatial">Geospatial</a>
   <a href="#pseudocode">Pseudocode</a>
   <a href="#hq">Terminal HW / HQ</a>
   <a href="#dashboard">Admin/GIS</a>
   <a href="#flutter">Flutter Structure</a>
   <a href="#roadmap">Roadmap</a>
+  <a href="#layers">13-Layer Map</a>
   <a href="#security">Security Checklist</a>
   <a href="#tracker">Security Tracker</a>
   <a href="#gaps">Open Gaps</a>
@@ -265,6 +274,40 @@
     </div>
   </section>
 
+  <section id="app-structure">
+    <div class="section-label">Product structure</div>
+    <h2>One app, three logins</h2>
+    <p>Login selects role, role selects interface — the same pattern already used for <code class="inline">vehicle_mode/</code> and <code class="inline">agent_ops/</code>, just applied at the top of the app instead of buried inside one flow. One Flutter codebase, three customer-facing interfaces underneath. Admin is deliberately not one of them — see below.</p>
+
+    <div class="mode-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="mode-card">
+        <div class="mode-label">Driver login</div>
+        <div class="mode-title">Operate + self-manage</div>
+        <ul class="mode-items"><li>Shift session, NFC tap receipt, fallback chain — everything already built</li><li>Self-service bank details (<code class="inline">LinkDriverAccount</code> — new, closes a real gap, see below)</li><li>Own transaction history, scoped to their own identity only</li></ul>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">Passenger login</div>
+        <div class="mode-title">Ride + pay</div>
+        <ul class="mode-items"><li>Hosts the HCE service — this is the passenger app the phone-tap section flagged as missing</li><li>Linked accounts, trip history, card status</li></ul>
+      </div>
+      <div class="mode-card">
+        <div class="mode-label">Student login</div>
+        <div class="mode-title">Same rails, separate identity</div>
+        <ul class="mode-items"><li>Also hosts HCE — functionally mirrors passenger for payment</li><li>Separate <code class="inline">role</code> for reporting/oversight; <code class="inline">institution_id</code> present, ready to receive real university data once it arrives — what it gates (fare, routes, verification) is still open</li></ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="tag">Admin is not a login on this app — on purpose</span>
+      <p>Putting Admin on the same picker as Driver/Passenger/Student means anyone who downloads the public app can see that an admin surface exists at all — unnecessary exposure for something that shows live driver GPS, revenue, and cross-role activity. Admin stays entirely on the React web dashboard, a genuinely separate surface, not a hidden option inside the customer-facing binary. If on-the-go monitoring is ever needed, the web dashboard already works fine in a phone browser — that doesn't require building a native admin experience into this app.</p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">Also not one of the three — different reason</span>
+      <p>Field agents (<code class="inline">agent_ops/</code>) and centralized driver onboarding (<code class="inline">ops/</code>) are operational staff modes within this app, gated by their own staff logins — not customer-facing, but also not hidden the way Admin is excluded above. They're staff running a specific task, not a privileged monitoring surface.</p>
+    </div>
+  </section>
+
   <section id="learning">
     <div class="section-label">Personal roadmap</div>
     <h2>Learning sequence</h2>
@@ -276,7 +319,7 @@
         <div class="stop-meta">The driver terminal app blocks the whole MVP</div>
         <div class="stop-body">
           <p>Closest language to Go you'll touch here. Unfamiliar parts: Dart's async/await style and Riverpod's state model — no direct Go equivalent for either.</p>
-          <ul><li>Focus: async/await, null safety, class/widget structure, then Riverpod specifically</li><li>Apply to: <code class="inline">features/session</code> and <code class="inline">features/nfc_tap</code></li></ul>
+          <ul><li>Focus: async/await, null safety, class/widget structure, then Riverpod specifically</li><li>Apply to: <code class="inline">driver_home/session</code> and <code class="inline">driver_home/nfc_tap</code></li></ul>
         </div>
       </div>
       <div class="stop">
@@ -316,7 +359,7 @@
       <tr><td>Moniepoint fee (est.)</td><td>~₦3–5</td></tr>
       <tr class="total"><td>Net per trip</td><td>~₦5–7</td></tr>
     </table>
-    <p style="font-size:12.5px;color:var(--text-faint);">Scales linearly — adding motorcycle feeders and BRT multiplies this without rebuilding the fee logic.</p>
+    <p style="font-size:12.5px;color:var(--text-faint);">Scales linearly — adding BRT and further corridors multiplies this without rebuilding the fee logic.</p>
   </section>
 
   <section id="fix">
@@ -351,20 +394,115 @@
     <div class="section-label">Data model</div>
     <h2>Core entities</h2>
     <p><span style="color:var(--teal);font-family:var(--font-mono);">session</span> and the binding fields on <span style="color:var(--teal);font-family:var(--font-mono);">terminal</span> close the two gaps above. Geo fields on <span style="color:var(--green);font-family:var(--font-mono);">trip</span> and the two new geospatial tables power the map and analytics.</p>
+    <p style="font-size:12.5px;color:var(--text-faint);">Naming fix: <code class="inline">terminal</code> is a driver's physical device (hardware_serial, bound to one driver). <code class="inline">terminal_location</code> is a place — Tanke, Challenge. <code class="inline">trip.entry/exit_terminal_id</code> used to blur these; now corrected to reference the place, since fares are about routes between places, not which device facilitated the tap.</p>
     <div class="schema">
-      <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | <span class="fk">agent</span></li><li>last_verified_at</li></ul></div>
-      <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>card_uid</li><li>status: active | void | reissued</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li></ul></div>
+      <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | agent | <span class="fk">student</span></li><li>institution_id <span class="fk">→ institution, nullable — student only, TBD what it gates</span></li><li>last_verified_at</li></ul></div>
+      <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>type: card | <span class="fk">phone_hce</span></li><li>card_uid <span class="fk">// type=card only</span></li><li>device_public_key <span class="fk">// type=phone_hce only</span></li><li>status: active | void | reissued</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li></ul></div>
       <div class="entity new-entity"><h4>card_batch <span class="fk">(agent accounting)</span></h4><ul><li>id (pk)</li><li>agent_id <span class="fk">→ identity (agent)</span></li><li>quantity_allocated</li><li>quantity_returned</li><li>quantity_damaged</li><li>status: open | reconciled | discrepancy</li><li>allocated_at, reconciled_at, reconciled_by_admin_id</li></ul></div>
-      <div class="entity new-entity"><h4>session <span class="fk">(fix 1)</span></h4><ul><li>id (pk)</li><li>driver_identity_id <span class="fk">→ identity</span></li><li>terminal_id <span class="fk">→ terminal</span></li><li>token, started_at, expires_at</li><li>verify_method: local_match | live_reverify</li><li>status: active | expired | flagged</li></ul></div>
+      <div class="entity new-entity"><h4>session <span class="fk">(fix 1)</span></h4><ul><li>id (pk)</li><li>driver_identity_id <span class="fk">→ identity</span></li><li>terminal_id <span class="fk">→ terminal</span></li><li>route_id <span class="fk">→ route // driver's choice for THIS shift, not fixed</span></li><li>token, started_at, expires_at</li><li>verify_method: local_match | live_reverify</li><li>status: active | expired | flagged</li></ul></div>
       <div class="entity new-entity"><h4>terminal <span class="fk">(fix 2)</span></h4><ul><li>id (pk), zone</li><li>hardware_serial <span class="fk">// physical device key</span></li><li>bound_driver_identity_id <span class="fk">→ identity</span></li><li>bound_at, bound_by_admin_id</li><li><em>no payout config stored here</em></li></ul></div>
-      <div class="entity"><h4>vehicle</h4><ul><li>id (pk), plate_ref</li><li>operator_identity_id <span class="fk">→ identity</span></li><li>class: motorcycle | keke | taxi | bus</li><li>compliance_status</li></ul></div>
-      <div class="entity"><h4>trip</h4><ul><li>id (pk)</li><li>passenger_identity_id <span class="fk">→ identity</span></li><li>session_id <span class="fk">→ session</span></li><li>nonce <span class="fk">// replay-checked</span></li><li>entry_terminal_id, exit_terminal_id</li><li class="fk">pickup_point: geometry(Point,4326)</li><li class="fk">dropoff_point: geometry(Point,4326)</li><li>fare, fee_split, timestamps</li></ul></div>
+      <div class="entity"><h4>vehicle</h4><ul><li>id (pk), plate_ref</li><li>operator_identity_id <span class="fk">→ identity</span></li><li>class: keke | taxi | bus</li><li>route_id <span class="fk">→ route // scopes the destination picker</span></li><li>compliance_status</li></ul></div>
+      <div class="entity new-entity"><h4>state <span class="fk">(new)</span></h4><ul><li>id (pk), name <span class="fk">// "Kwara", "Lagos"...</span></li><li>is_active</li><li>created_by_admin_id, created_at</li></ul></div>
+      <div class="entity new-entity"><h4>institution <span class="fk">(new — pending data)</span></h4><ul><li>id (pk), name</li><li>state_id <span class="fk">→ state</span></li><li>is_active</li><li>created_by_admin_id, created_at</li></ul></div>
+      <div class="entity new-entity"><h4>route <span class="fk">(new)</span></h4><ul><li>id (pk), name <span class="fk">// "Tanke–Challenge Corridor"</span></li><li>state_id <span class="fk">→ state</span></li><li>vehicle_class</li></ul></div>
+      <div class="entity new-entity"><h4>route_stop <span class="fk">(new)</span></h4><ul><li>id (pk)</li><li>route_id <span class="fk">→ route</span></li><li>terminal_location_id <span class="fk">→ terminal_location</span></li><li>sequence_order <span class="fk">// picker order, and "ahead of me" filtering</span></li></ul></div>
+      <div class="entity"><h4>trip <span class="fk">(corrected)</span></h4><ul><li>id (pk)</li><li>passenger_identity_id <span class="fk">→ identity</span></li><li>session_id <span class="fk">→ session</span></li><li>nonce <span class="fk">// replay-checked</span></li><li>entry_terminal_location_id <span class="fk">→ terminal_location</span></li><li>exit_terminal_location_id <span class="fk">→ terminal_location, nullable</span></li><li>fare_source_type: explicit_rule | route_tier | distance_band</li><li>fare_source_id <span class="fk">// polymorphic — id in fare_rule OR route_fare_tier</span></li><li class="fk">pickup_point: geometry(Point,4326)</li><li class="fk">dropoff_point: geometry(Point,4326)</li><li>fare, fee_split, timestamps</li></ul></div>
+      <div class="entity new-entity"><h4>terminal_location <span class="fk">(new)</span></h4><ul><li>id (pk), name <span class="fk">// "Tanke Terminal", "Tipper Garage"</span></li><li>state_id <span class="fk">→ state</span></li><li>geo_lat, geo_lng, zone</li><li>tier: major | minor <span class="fk">// named terminal vs. intermediate stop</span></li><li><em>a place, not a device — distinct from the driver's terminal above</em></li></ul></div>
+      <div class="entity new-entity"><h4>route_fare_tier <span class="fk">(new)</span></h4><ul><li>id (pk)</li><li>route_id <span class="fk">→ route</span></li><li>stops_traversed_min, stops_traversed_max</li><li>vehicle_class, fare_amount</li></ul></div>
+      <div class="entity new-entity"><h4>fare_change_log <span class="fk">(new)</span></h4><ul><li>id (pk)</li><li>entity_type: fare_rule | route_fare_tier</li><li>entity_id</li><li>old_amount, new_amount</li><li>changed_by_admin_id <span class="fk">→ identity (admin)</span></li><li>changed_at, reason <span class="fk">// "Union agreement Q3 2026"</span></li></ul></div>
+      <div class="entity new-entity"><h4>fare_rule <span class="fk">(new)</span></h4><ul><li>id (pk)</li><li>origin_terminal_location_id <span class="fk">→ terminal_location</span></li><li>destination_terminal_location_id <span class="fk">→ terminal_location, nullable</span></li><li>distance_band <span class="fk">// short|medium|long — only when destination is null</span></li><li>vehicle_class, fare_amount, is_active</li></ul></div>
       <div class="entity geo-entity"><h4>terminal_locations <span class="fk">(geo)</span></h4><ul><li>id (pk)</li><li>terminal_id <span class="fk">→ terminal</span></li><li class="fk">location: geometry(Point,4326)</li><li>recorded_at</li></ul></div>
       <div class="entity geo-entity"><h4>corridor_stats <span class="fk">(geo)</span></h4><ul><li>id (pk), corridor_name</li><li class="fk">geom: geometry(LineString,4326)</li><li>trip_count, revenue_total</li><li>updated_at</li></ul></div>
     </div>
     <pre><code><span class="c-com">-- enabled once, in T0</span>
 <span class="c-key">CREATE EXTENSION</span> postgis;
 <span class="c-key">CREATE EXTENSION</span> postgis_topology;</code></pre>
+  </section>
+
+  <section id="fare-engine">
+    <div class="section-label">Determined before the tap, not after</div>
+    <h2>Fare engine</h2>
+    <p>The driver selects the destination, the fare shows, <em>then</em> the passenger taps — matching how this already works verbally ("I'm going to Terminal F"). Three things feed one lookup: a fixed fare for named terminal-to-terminal trips, a stop-count tier for intermediate stops along whichever route the driver is running that day, and a distance-band estimate for the rare case that's neither.</p>
+
+    <div class="fix-box">
+      <span class="tag">Why distance bands, not a live GPS meter</span>
+      <p>Every other flow in this system is pay-before-boarding — fare known and charged before the ride starts, which is also what protects the driver from a passenger who can't pay at the end. A live meter means paying <em>after</em> the ride, which breaks that pattern and reopens exactly the dispute risk the rest of this architecture was built to avoid. A distance band keeps the same upfront-payment guarantee, just with an estimated fare instead of an exact one — and it matches how Keke fares already work culturally: flat by rough distance, not metered.</p>
+    </div>
+
+    <h3>The flow</h3>
+    <ol>
+      <li><strong>Shift start:</strong> driver picks which admin-defined route they're running today (Tanke↔Challenge, Tanke↔Ipata, Tanke↔Taiwo...) — pre-filled with their usual route, changeable daily. Stored on the <em>session</em>, not fixed on the vehicle.</li>
+      <li>Passenger tells the driver their actual stop — often not a named terminal at all: "Tanke Oke Odo to High Court," not "Tanke to Challenge." A driver running the Tanke↔Challenge route naturally covers this, because High Court is one of the intermediate <code class="inline">route_stop</code>s along it.</li>
+      <li>Driver's terminal shows a destination picker — <strong><code class="inline">GetRouteDestinations</code></strong> returns the stops on <em>today's chosen route</em>, in corridor order, major and minor stops together, plus a "not on this route" option with distance-band choices for the genuine edge case.</li>
+      <li>Driver selects it → <code class="inline">GetFare</code> looks up the matching rule → fare displays on screen.</li>
+      <li>Passenger taps card or phone → <code class="inline">AuthorizeTrip</code> charges exactly that fare, traceable back to the exact rule via <code class="inline">trip.fare_rule_id</code>.</li>
+    </ol>
+
+    <h3>Scoping the picker — the actual mechanism</h3>
+    <p><code class="inline">route_stop</code> is the ordered list of terminal locations on a route — this was already built to hold many intermediate stops, not just two endpoints, so Tipper Garage, Flower Garden, and High Court are just more rows in <code class="inline">sequence_order</code> between Tanke and Challenge. <code class="inline">vehicle.route_id</code> is a default suggestion; <code class="inline">session.route_id</code> is what's actually used once a driver confirms or changes it for the day.</p>
+    <ul>
+      <li><strong>Ahead-of-position filtering</strong> — using the driver's live GPS ping against <code class="inline">sequence_order</code>, the picker drops stops already behind them.</li>
+      <li><strong>Fetch once per shift, not per trip</strong> — pull the route's stops once at session start, cache client-side in Flutter for the rest of the shift.</li>
+    </ul>
+
+    <pre><code><span class="c-fn">func</span> GetRouteDestinations(sessionID string, currentLat, currentLng float64) ([]TerminalLocation, error) {
+    session := <span class="c-fn">db.GetSession</span>(sessionID)
+    stops := <span class="c-fn">db.GetRouteStops</span>(session.RouteID) <span class="c-com">// today's chosen route, ordered by sequence_order</span>
+
+    currentSeq := <span class="c-fn">nearestStopSequence</span>(stops, currentLat, currentLng)
+    ahead := []TerminalLocation{}
+    <span class="c-key">for</span> _, s := <span class="c-key">range</span> stops {
+        <span class="c-key">if</span> s.SequenceOrder > currentSeq {
+            ahead = append(ahead, s.TerminalLocation)
+        }
+    }
+    <span class="c-key">return</span> ahead, nil
+}</code></pre>
+
+    <p style="font-size:12.5px;color:var(--text-faint);">One route per shift by default — matches the "fixed routes, no random roadside loading" principle from the original transport model, while still giving drivers the daily choice they asked for. Running two routes in one shift would be a real schema change (a route_id that can flip mid-session), not something this covers yet.</p>
+
+    <p style="font-size:12.5px;color:var(--text-faint);">Route management — creating routes, ordering their stops, assigning which routes exist for drivers to choose from — is a new admin capability, privileged and web-only alongside terminal provisioning.</p>
+
+    <h3>Fares between intermediate stops — tier by stops traversed, not by pre-priced pairs</h3>
+    <p>The naive approach — an explicit fare row for every possible origin/destination pair — explodes fast. A route with 8 stops has up to 56 directed pairs; someone has to price and maintain every one. <code class="inline">route_fare_tier</code> avoids that: fare is computed from <em>how many stops apart</em> two points are on the route, using the <code class="inline">sequence_order</code> already on each stop, not from a lookup table sized to every combination.</p>
+    <p>Tanke Oke Odo → High Court and Tanke Oke Odo → Tipper Garage don't need two separately priced rows — they need one tier table per route (e.g. 1–2 stops = ₦150, 3–5 stops = ₦200, 6+ = ₦250), and every pair on that route prices itself automatically from where they sit in the sequence. Named-terminal fares (a full Tanke→Challenge run) can still get an explicit override in <code class="inline">fare_rule</code> where the business wants a specific number instead of the tier default — the tier system is the sensible default, not the only option.</p>
+
+    <pre><code><span class="c-com">// unified result regardless of which mechanism matched — this is what</span>
+<span class="c-com">// makes trip.fare_source_type / fare_source_id traceable either way</span>
+<span class="c-fn">type</span> FareQuote struct {
+    FareAmount            float64
+    SourceType            string <span class="c-com">// "explicit_rule" | "route_tier" | "distance_band"</span>
+    SourceID              string
+    DestinationTerminalLocationID *string <span class="c-com">// nil for distance_band</span>
+}
+
+<span class="c-fn">func</span> GetFare(sessionID, originID, destinationID string, vehicleClass string) (*FareQuote, error) {
+    session := <span class="c-fn">db.GetSession</span>(sessionID)
+
+    <span class="c-com">// explicit override first — e.g. a named full-corridor fare set deliberately</span>
+    <span class="c-key">if</span> rule := <span class="c-fn">db.FindExplicitFareRule</span>(originID, destinationID, vehicleClass); rule != nil {
+        <span class="c-key">return</span> &FareQuote{rule.FareAmount, <span class="c-str">"explicit_rule"</span>, rule.ID, &destinationID}, nil
+    }
+
+    <span class="c-com">// same-route case — the common one — price by stops traversed</span>
+    origin, dest := <span class="c-fn">db.GetRouteStop</span>(session.RouteID, originID), <span class="c-fn">db.GetRouteStop</span>(session.RouteID, destinationID)
+    <span class="c-key">if</span> origin != nil && dest != nil {
+        stopsTraversed := <span class="c-fn">abs</span>(dest.SequenceOrder - origin.SequenceOrder)
+        tier := <span class="c-fn">db.FindRouteFareTier</span>(session.RouteID, stopsTraversed, vehicleClass)
+        <span class="c-key">return</span> &FareQuote{tier.FareAmount, <span class="c-str">"route_tier"</span>, tier.ID, &destinationID}, nil
+    }
+
+    <span class="c-com">// neither a named override nor a stop on today's route — genuine fallback</span>
+    band := <span class="c-fn">db.FindDistanceBandFare</span>(originID, <span class="c-str">"medium"</span>, vehicleClass)
+    <span class="c-key">return</span> &FareQuote{band.FareAmount, <span class="c-str">"distance_band"</span>, band.ID, nil}, nil
+}</code></pre>
+
+    <p style="font-size:12.5px;color:var(--text-faint);">The 85% coverage you're aiming for is an ops question, not a schema one — the schema already supports as many <code class="inline">route_stop</code>s as a route needs. The actual work is HQ observing real alighting patterns per corridor and populating enough intermediate stops to match them; the distance-band fallback exists precisely for whoever falls outside that 85%.</p>
+
+    <div class="fix-box">
+      <span class="tag">Updates the existing AuthorizeTrip</span>
+      <p><code class="inline">AuthorizeTrip</code> previously computed fare internally via a generic <code class="inline">calculateFare(terminalID)</code>. It now takes the <code class="inline">FareQuote</code> from <code class="inline">GetFare</code> as an input instead — resolved by the destination-picker step before the tap, not derived blindly at authorization time. <code class="inline">fare_source_type</code>/<code class="inline">fare_source_id</code> carry through onto the trip either way, so a route-tier fare and an explicit-rule fare are both fully traceable, just via different tables. Full current definition lives in one place — pseudocode block 4, in the Pseudocode section below — rather than duplicated here, since two copies of the same function are exactly how a doc drifts out of sync with itself.</p>
+    </div>
   </section>
 
   <section id="payment">
@@ -391,6 +529,49 @@
       <div class="fallback-row"><span class="fallback-priority">3</span><span class="fallback-bank">PalmPay</span><span class="fallback-balance">not reached</span><span class="fallback-status unused">—</span></div>
     </div>
     <p style="font-size:12.5px;margin-top:10px;">Driver sees <strong style="color:var(--green);">"Payment successful"</strong> · Passenger sees <strong>"Paid from OPay · GTBank had insufficient funds"</strong></p>
+  </section>
+
+  <section id="hce">
+    <div class="section-label">Beyond physical cards</div>
+    <h2>Phone-based tap (HCE)</h2>
+    <p>Letting a passenger's own NFC phone initiate payment — not just a physical card — is a real feature, and it can be architected to reuse the exact device-bound-key pattern already built for driver terminals, rather than inventing something new.</p>
+
+    <h3>The mechanism: Host Card Emulation</h3>
+    <p>Android phones can run an <strong>HCE (Host Card Emulation)</strong> service inside an app — the phone presents itself to the driver's reader exactly like a physical NFC card at the protocol level. The driver terminal doesn't need to know or care whether it just read a card or a phone.</p>
+
+    <div class="fix-box">
+      <span class="tag">Worth doing properly, not just the easy version</span>
+      <p>The naive version has the phone emit a static token, identical to a physical card's UID — which inherits the same cloning risk cards already have. The better version reuses the <strong>device-bound key + signed nonce</strong> pattern already built for driver terminals: the phone holds a private key in Android Keystore, the reader/backend sends a challenge, the phone signs it live. A cloned static token is replayable; a live signature isn't. Same mechanism, same reasoning, already proven out in the device-binding fix — just applied to the passenger side now.</p>
+    </div>
+
+    <h3>Platform reality — Android first, iOS is different</h3>
+    <p><strong>Android</strong> supports general-purpose third-party HCE apps today — this is straightforwardly buildable as a feature of a passenger app. <strong>iOS</strong> locks NFC card emulation down much harder; third-party apps generally can't emulate a card the way Android allows. The realistic iOS path is Apple's <strong>Express Transit</strong> entitlement — a program specifically for transit agencies, requiring an application process with Apple, not just a code change. Practical read: build phone-tap for Android first, treat iOS as its own later effort with its own approval timeline, and keep physical cards as the universal fallback that works on both.</p>
+
+    <div class="callout">
+      <span class="tag">Structural gap this surfaces</span>
+      <p>Phone-tap requires a <strong>passenger-facing app</strong> to host the HCE service — and nothing in the Flutter structure so far builds one. <code class="inline">vehicle_mode/</code>, <code class="inline">agent_ops/</code>, and <code class="inline">ops/</code> are all driver- or staff-facing. A passenger app (or a passenger mode within the same codebase) is new scope, not something this slots into for free.</p>
+    </div>
+
+    <h3>Schema</h3>
+    <p><code class="inline">credential.type</code> distinguishes <code class="inline">card</code> from <code class="inline">phone_hce</code> — a card credential carries <code class="inline">card_uid</code>, a phone credential carries <code class="inline">device_public_key</code> instead. Both are still just rows in the same table; <code class="inline">AuthorizeTrip</code>'s downstream logic (session check, fallback, trip creation) doesn't change either way.</p>
+
+    <pre><code><span class="c-com">// challenge-response variant — reader sends a nonce, phone signs it live,</span>
+<span class="c-com">// backend verifies against the stored public key. No static token to clone.</span>
+<span class="c-fn">func</span> AuthorizeTripPhone(deviceSignature []byte, challengeNonce, terminalID string) (*Trip, error) {
+    <span class="c-key">if</span> <span class="c-fn">db.NonceSeen</span>(challengeNonce) {
+        <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"replay detected"</span>)
+    }
+    credential := <span class="c-fn">db.FindCredentialByChallenge</span>(challengeNonce)
+    <span class="c-key">if</span> credential.Type != <span class="c-str">"phone_hce"</span> {
+        <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"not a phone credential"</span>)
+    }
+    <span class="c-key">if</span> !<span class="c-fn">verifySignature</span>(credential.DevicePublicKey, challengeNonce, deviceSignature) {
+        <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"signature does not match — reject"</span>)
+    }
+    <span class="c-fn">db.MarkNonceUsed</span>(challengeNonce)
+    <span class="c-com">// from here: identical to AuthorizeTrip — session check, fallback, trip creation</span>
+    <span class="c-key">return</span> <span class="c-fn">continueTripAuthorization</span>(credential.IdentityID, terminalID)
+}</code></pre>
   </section>
 
   <section id="geospatial">
@@ -466,9 +647,13 @@
 }</code></pre>
 
     <h3>3 — Driver shift-start session <span class="stack-tag alt">Flutter</span> <span class="stack-tag">Go</span></h3>
-    <pre><code><span class="c-fn">func</span> StartDriverSession(driverID, terminalID string, scan FingerprintScan) (*Session, error) {
+    <pre><code><span class="c-com">// routeID is the driver's choice for today — pre-filled with their usual</span>
+<span class="c-com">// route client-side, but this is what actually gets locked in for the shift</span>
+<span class="c-fn">func</span> StartDriverSession(driverID, terminalID, routeID string, scan FingerprintScan) (*Session, error) {
     terminal := <span class="c-fn">db.GetTerminal</span>(terminalID)
     <span class="c-key">if</span> terminal.BoundDriverID != driverID { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"terminal not bound to this driver"</span>) }
+
+    <span class="c-key">if</span> !<span class="c-fn">db.RouteExists</span>(routeID) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"not an admin-defined route"</span>) } <span class="c-com">// drivers pick from existing routes, don't invent one</span>
 
     identity := <span class="c-fn">db.GetIdentity</span>(driverID)
     daysSince := <span class="c-fn">time.Since</span>(identity.LastVerified).Hours() / 24
@@ -484,26 +669,49 @@
     }
 
     <span class="c-key">return</span> <span class="c-fn">db.CreateSession</span>(Session{
-        DriverID: driverID, TerminalID: terminalID, Token: <span class="c-fn">generateToken</span>(),
+        DriverID: driverID, TerminalID: terminalID, RouteID: routeID, Token: <span class="c-fn">generateToken</span>(),
         ExpiresAt: <span class="c-fn">time.Now</span>().Add(ShiftTTL), VerifyMethod: method, Status: <span class="c-str">"active"</span>,
     }), nil
 }</code></pre>
 
-    <h3>4 — Trip authorization + replay check <span class="stack-tag alt">Flutter</span> <span class="stack-tag">Go</span></h3>
-    <pre><code><span class="c-fn">func</span> AuthorizeTrip(cardUID, terminalID, nonce string) (*Trip, error) {
-    <span class="c-key">if</span> <span class="c-fn">db.NonceSeen</span>(nonce) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"replay detected"</span>) }
+    <h3>4 — Trip authorization: replay-checked AND duplicate-tap-checked <span class="stack-tag alt">Flutter</span> <span class="stack-tag">Go</span></h3>
+    <div class="fix-box">
+      <span class="tag">Two different protections, doing two different jobs</span>
+      <p><strong>Nonce replay check</strong> stops the exact same signed request being processed twice — a network retry resending an identical payload. It does <em>not</em> stop a second, genuinely different tap (fresh nonce) for the same real boarding event — a driver double-tapping by accident, or a passenger tapping again because the confirmation wasn't visible. That needs a second, independent check: a short-window lookup for a recent successful trip on the same passenger+terminal pair. Both are required; neither substitutes for the other.</p>
+    </div>
+    <pre><code><span class="c-fn">func</span> AuthorizeTrip(cardUID, terminalID, nonce string, quote *FareQuote) (*Trip, error) {
+    <span class="c-key">if</span> <span class="c-fn">db.NonceSeen</span>(nonce) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"replay detected"</span>) } <span class="c-com">// catches: identical request resent</span>
+
     credential := <span class="c-fn">db.FindCredentialByCard</span>(cardUID)
     <span class="c-key">if</span> credential.Status != <span class="c-str">"active"</span> { <span class="c-key">return</span> <span class="c-fn">Fallback</span>(terminalID) }
+
+    <span class="c-com">// catches: a genuinely different tap, same passenger+terminal, seconds apart —</span>
+    <span class="c-com">// short window on purpose, never blocks a real second trip minutes later</span>
+    <span class="c-key">if</span> recent := <span class="c-fn">db.FindRecentSuccessfulTrip</span>(credential.IdentityID, terminalID, 20*time.Second); recent != nil {
+        <span class="c-key">return</span> recent, nil <span class="c-com">// idempotent response — return the existing trip, don't charge again</span>
+    }
+
     session := <span class="c-fn">db.FindActiveSession</span>(terminalID)
     <span class="c-key">if</span> session == nil || session.ExpiresAt.Before(<span class="c-fn">time.Now</span>()) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"no active driver session"</span>) }
 
     terminal := <span class="c-fn">db.GetTerminal</span>(terminalID)
     payoutAccount := <span class="c-fn">db.GetLinkedAccount</span>(terminal.BoundDriverID)
 
-    trip := <span class="c-fn">db.CreateTrip</span>(Trip{PassengerID: credential.IdentityID, SessionID: session.ID, EntryTerminal: terminalID, Nonce: nonce, Fare: <span class="c-fn">calculateFare</span>(terminalID)})
-    <span class="c-fn">moniepoint.Transfer</span>(credential.IdentityID, payoutAccount, trip.Fare)
+    <span class="c-key">var</span> trip Trip
+    err := <span class="c-fn">db.WithTx</span>(<span class="c-key">func</span>(tx) error {
+        trip = <span class="c-fn">db.CreateTrip</span>(tx, Trip{
+            PassengerID: credential.IdentityID, SessionID: session.ID, EntryTerminal: terminalID,
+            Nonce: nonce, Fare: quote.FareAmount, FareSourceType: quote.SourceType, FareSourceID: quote.SourceID,
+        })
+        <span class="c-com">// nonce doubles as the idempotency key — stable across a retry, known before</span>
+        <span class="c-com">// this call, so even if this exact call gets retried after a lost response,</span>
+        <span class="c-com">// Moniepoint returns the original result instead of transferring twice</span>
+        <span class="c-key">return</span> <span class="c-fn">moniepoint.Transfer</span>(credential.IdentityID, payoutAccount, trip.Fare, <span class="c-fn">IdempotencyKey</span>(nonce))
+    })
+    <span class="c-key">if</span> err != nil { <span class="c-key">return</span> nil, err }
+
     <span class="c-fn">db.MarkNonceUsed</span>(nonce)
-    <span class="c-key">return</span> trip, nil
+    <span class="c-key">return</span> &trip, nil
 }</code></pre>
 
     <h3>5 — Fallback chain <span class="stack-tag alt">Flutter</span></h3>
@@ -587,6 +795,52 @@
         <span class="c-fn">db.FlagAgentForReview</span>(agentID) <span class="c-com">// blocks AllocateCards until HQ clears it</span>
     }
 }</code></pre>
+
+    <h3>11 — Driver self-service: link bank account <span class="stack-tag alt">Flutter (driver login)</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// closes a real gap: RegisterNewDriver never set a payout account.</span>
+<span class="c-com">// AuthorizeTrip calls db.GetLinkedAccount(driverID) assuming one exists —</span>
+<span class="c-com">// this is what actually makes that true, and it's driver-initiated,</span>
+<span class="c-com">// not something ops or an agent has to do on their behalf.</span>
+<span class="c-fn">func</span> LinkDriverAccount(driverIdentityID string, bank BankDetails) error {
+    identity := <span class="c-fn">db.GetIdentity</span>(driverIdentityID)
+    <span class="c-key">if</span> identity.Role != Driver {
+        <span class="c-key">return</span> <span class="c-fn">errors.New</span>(<span class="c-str">"not a driver identity"</span>)
+    }
+    <span class="c-key">return</span> <span class="c-fn">db.SetLinkedAccount</span>(driverIdentityID, bank)
+}</code></pre>
+
+    <div class="callout">
+      <span class="tag">Related authorization gap — worth fixing at the same time</span>
+      <p>"Driver sees their transaction history" needs to mean <em>their own</em>, enforced server-side — not a client-supplied <code class="inline">driver_id</code> that anyone could swap for someone else's. The current working Go code's <code class="inline">/trips?driver_id=</code> accepts that parameter from the caller with no check it matches who's actually asking. Once driver login exists, this needs to derive <code class="inline">driver_id</code> from the authenticated session, not trust the query string.</p>
+    </div>
+
+    <h3>12 — Admin: edit a fare, anytime <span class="stack-tag alt">React admin</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// union-negotiated fare changes are an admin action, not a redeploy —</span>
+<span class="c-com">// old value is never silently overwritten, always logged</span>
+<span class="c-fn">func</span> UpdateFare(entityType, entityID string, newAmount float64, adminID, reason string) error {
+    <span class="c-key">return</span> <span class="c-fn">db.WithTx</span>(<span class="c-key">func</span>(tx) error {
+        oldAmount := <span class="c-fn">db.GetFareAmount</span>(tx, entityType, entityID)
+        <span class="c-key">if</span> err := <span class="c-fn">db.SetFareAmount</span>(tx, entityType, entityID, newAmount); err != nil { <span class="c-key">return</span> err }
+        <span class="c-key">return</span> <span class="c-fn">db.InsertFareChangeLog</span>(tx, FareChangeLog{
+            EntityType: entityType, EntityID: entityID, OldAmount: oldAmount, NewAmount: newAmount,
+            ChangedByAdminID: adminID, Reason: reason, ChangedAt: <span class="c-fn">time.Now</span>(),
+        })
+    })
+}</code></pre>
+
+    <h3>13 — Admin: add a state / add an institution <span class="stack-tag alt">React admin</span> <span class="stack-tag">Go</span></h3>
+    <pre><code><span class="c-com">// expanding beyond Kwara is an admin action against existing tables,</span>
+<span class="c-com">// not a schema change — this is what "every state eventually" actually costs</span>
+<span class="c-fn">func</span> AddState(name string, adminID string) (*State, error) {
+    <span class="c-key">return</span> <span class="c-fn">db.CreateState</span>(State{Name: name, IsActive: <span class="c-key">true</span>, CreatedByAdmin: adminID, CreatedAt: <span class="c-fn">time.Now</span>()})
+}
+
+<span class="c-com">// institution data is still pending — this exists so adding a university,</span>
+<span class="c-com">// once the real list arrives, is the same one-line action as adding a state</span>
+<span class="c-fn">func</span> AddInstitution(name, stateID string, adminID string) (*Institution, error) {
+    <span class="c-key">if</span> !<span class="c-fn">db.StateExists</span>(stateID) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"unknown state"</span>) }
+    <span class="c-key">return</span> <span class="c-fn">db.CreateInstitution</span>(Institution{Name: name, StateID: stateID, IsActive: <span class="c-key">true</span>, CreatedByAdmin: adminID, CreatedAt: <span class="c-fn">time.Now</span>()})
+}</code></pre>
   </section>
 
   <section id="hq">
@@ -594,11 +848,14 @@
     <h2>Terminal hardware, agents &amp; HQ monitoring</h2>
     <p>Two different "terminal" concepts get used loosely in this project — worth being precise here. The <strong>device terminal</strong> is the driver's handheld/mounted hardware, bound to exactly one driver (the <code class="inline">terminal</code> table). A <strong>terminal location</strong> is a physical pickup point (Tanke, Challenge) — where field agents are stationed.</p>
 
-    <h3>Device terminal — build options</h3>
+    <h3>Device terminal — the resolved phased plan</h3>
+    <p>This went through real back-and-forth — a DIY ESP32/RPi Zero build was considered and retired once a better-fitting commercial option turned up. Landed here, in order:</p>
     <ul>
-      <li><strong>T1 default: budget Android device.</strong> Mid-range phones with both NFC and a fingerprint sensor already exist in the ₦40k–70k range. Runs your Flutter app directly — no new language, no embedded hardware R&amp;D.</li>
-      <li><strong>T4/T5 option: custom hardware.</strong> ESP32/RPi Zero + PN532 NFC + fingerprint module + GSM + GPS, running embedded C/C++ or MicroPython. Only worth it once device cost at scale is the actual bottleneck.</li>
+      <li><strong>T1 (now): budget Android device.</strong> Mid-range phones with both NFC and a fingerprint sensor already exist in the ₦40k–70k range. Runs the Flutter app directly — no new language, no PAXSTORE review lead time, no procurement uncertainty. Nothing about hardware blocks the pilot from starting.</li>
+      <li><strong>T2: PAX A920 Pro.</strong> PCI PTS 5.x SRED-certified, built-in touchscreen, NFC, GPS, 4G — purpose-built for exactly this kind of mobile field commerce, not consumer hardware pressed into service. Transition point once the fleet scales to 5 corridors — by then PAXSTORE developer registration has had time to clear in parallel, and real T1 revenue justifies the higher per-unit cost. <strong>One real gap:</strong> no confirmed fingerprint sensor on this device — <code class="inline">StartDriverSession</code>'s <code class="inline">verify_method</code> gains a <code class="inline">pin_match</code> option alongside <code class="inline">local_match</code>/<code class="inline">live_reverify</code>, with the device-bound key still anchored in the A920's certified secure processor. Deployment goes through PAX's Developer Portal → PAXSTORE submission (private, fleet-only listing, not public) → a local reseller for procurement — not a full business partnership, but a real registration-and-review process.</li>
+      <li><strong>T4/T5: ODM-customized or fully custom hardware.</strong> A real long-term goal, deliberately sequenced late — 12–24+ months of engineering, mandatory NCC type approval for any custom cellular device sold in Nigeria, optional-but-valuable PCI PTS certification if matching A920-level trust assurance matters. Start ODM relationship-building informally during T2–T3 so T4 isn't starting from zero; don't let it compete with T1–T3's actual job, which is proving the software and business model work.</li>
     </ul>
+    <p style="font-size:12.5px;color:var(--text-faint);">The ESP32/RPi Zero + companion-phone hybrid considered earlier is retired, not built — A920 Pro achieves better durability and real security certification with no new firmware skill required, so the DIY path no longer earns its complexity.</p>
 
     <h3>HQ — monitoring only</h3>
     <p>HQ does not run registration. It's the React + Mapbox admin dashboard — live driver/vehicle positions, session status, revenue, anomaly flags, and the terminal provisioning/rebind console. Its one operational role beyond monitoring is <strong>new driver onboarding</strong>, kept centralized because it binds physical hardware to a driver — a security-sensitive action, not a customer-service one.</p>
@@ -674,11 +931,17 @@
 
     <h3>What it does</h3>
     <ul>
-      <li><strong>Live map</strong> — every terminal with an active session, colored by status (active / flagged / expired).</li>
+      <li><strong>Live map</strong> — every terminal with an active session, colored by status (active / flagged / expired) — driver motion via their individual device terminal, per the original ask.</li>
       <li><strong>Zone overlays</strong> — geo-fenced operating zones; anomaly detection renders as a flagged marker in real time.</li>
-      <li><strong>Provisioning console</strong> — calls <code class="inline">ProvisionTerminal</code> / <code class="inline">RebindTerminal</code>, enforcing the new-driver-fingerprint step before submit.</li>
-      <li><strong>Reconciliation view</strong> — every fallback-to-cash event, since it's the one path funds don't move digitally.</li>
+      <li><strong>Cross-role oversight</strong> — not just drivers: passenger and student registration counts, active credential status, trip volume broken out by role, agent card-issuance activity. This is the "oversight of the whole operation, driver to passenger to student" surface.</li>
+      <li><strong>Provisioning console</strong> — calls <code class="inline">ProvisionTerminal</code> / <code class="inline">RebindTerminal</code>, enforcing the new-driver-fingerprint step before submit. <strong>Web only</strong> — not on the mobile Admin login.</li>
+      <li><strong>Route management</strong> — create routes, order their stops, assign vehicles to a route. <strong>Web only</strong>, same reasoning — this is what <code class="inline">GetRouteDestinations</code> reads from.</li>
+      <li><strong>Fare management</strong> — <code class="inline">UpdateFare</code> on any <code class="inline">fare_rule</code> or <code class="inline">route_fare_tier</code>, every change logged with who, when, and why. A union-negotiated fare change is an edit, not a redeploy.</li>
+      <li><strong>State &amp; institution management</strong> — <code class="inline">AddState</code> / <code class="inline">AddInstitution</code>. Expanding to a new state is adding a row, not changing the schema — the extensibility this whole architecture was built for.</li>
+      <li><strong>Reconciliation view</strong> — every fallback-to-cash event and card batch discrepancy. <strong>Web only</strong>, same reasoning.</li>
+      <li><strong>Payout resend</strong> — for the rare "driver says they didn't receive it" case, reuses the original trip's nonce as the idempotency key, never a fresh transfer. This is the manual-side counterpart to the automated double-charge protection in <code class="inline">AuthorizeTrip</code> — see Section 13 of the Engineering Guide.</li>
     </ul>
+    <p style="font-size:12.5px;color:var(--text-faint);">The mobile Admin login (see "One App, Four Logins" above) mirrors the live map and cross-role oversight for on-the-go checking — it deliberately excludes the provisioning console and reconciliation view, which stay privileged-web-only.</p>
   </section>
 
   <section id="flutter">
@@ -703,20 +966,37 @@
     │       ├── remote/          <span class="c-com">// StartSession, AuthorizeTrip, Fallback</span>
     │       └── local/           <span class="c-com">// cached fingerprint template, secure storage only</span>
     ├── features/
-    │   ├── session/             <span class="c-com">// shift-start screen — calls StartDriverSession</span>
-    │   ├── nfc_tap/             <span class="c-com">// NFC capture, nonce generation, calls AuthorizeTrip</span>
-    │   ├── fingerprint/         <span class="c-com">// biometric capture wrapper (local_auth)</span>
-    │   ├── fallback/            <span class="c-com">// PIN → USSD → fingerprint retry UI</span>
-    │   ├── gis_tracking/        <span class="c-com">// background GPS ping, anomaly-triggered re-auth</span>
-    │   ├── vehicle_mode/        <span class="c-com">// trip-flow UI, selected by vehicle.class</span>
-    │   │   ├── keke/           <span class="c-com">// terminal-to-terminal flow</span>
-    │   │   └── feeder/         <span class="c-com">// motorcycle short-hop flow</span>
+    │   ├── auth/                 <span class="c-com">// login → routes to one of the four homes below</span>
+    │   ├── fingerprint/          <span class="c-com">// shared biometric wrapper (local_auth) — used by driver shift-start AND staff registration</span>
+    │   │
+    │   ├── driver_home/
+    │   │   ├── session/         <span class="c-com">// shift-start: fingerprint + today's route choice — calls StartDriverSession</span>
+    │   │   ├── nfc_tap/         <span class="c-com">// NFC capture, nonce generation, calls AuthorizeTrip</span>
+    │   │   ├── fallback/        <span class="c-com">// PIN → USSD → fingerprint retry UI</span>
+    │   │   ├── gis_tracking/    <span class="c-com">// background GPS ping, anomaly-triggered re-auth</span>
+    │   │   ├── bank_details/    <span class="c-com">// calls LinkDriverAccount — self-service, closes the payout gap</span>
+    │   │   ├── transaction_history/ <span class="c-com">// own trips only — scoped server-side, never a client-passed driver_id</span>
+    │   │   └── vehicle_mode/    <span class="c-com">// trip-flow UI, selected by vehicle.class</span>
+    │   │       └── keke/       <span class="c-com">// destination picker → GetFare → NFC tap</span>
     │   │                       <span class="c-com">// no taxi/ — that's T4 partner API, not this app</span>
-    │   ├── ops/                 <span class="c-com">// HQ-only, gated by ops login — driver onboarding</span>
-    │   │   └── new_driver/     <span class="c-com">// calls RegisterNewDriver, binds device terminal</span>
-    │   └── agent_ops/           <span class="c-com">// field-agent-only, gated by agent login</span>
-    │       ├── new_passenger/  <span class="c-com">// calls RegisterPassenger</span>
-    │       └── lost_card/      <span class="c-com">// calls ReissueCard</span>
+    │   │
+    │   ├── passenger_home/
+    │   │   ├── hce/             <span class="c-com">// hosts the HCE service — see Phone Tap (HCE) section</span>
+    │   │   ├── linked_accounts/
+    │   │   └── trip_history/
+    │   │
+    │   ├── student_home/         <span class="c-com">// mirrors passenger_home — same HCE, separate role for reporting</span>
+    │   │   ├── hce/
+    │   │   ├── linked_accounts/
+    │   │   └── trip_history/
+    │   │
+    │   ├── admin_home/           <span class="c-com">// mobile, monitoring-only — live map + cross-role oversight, no privileged actions</span>
+    │   │
+    │   ├── ops/                  <span class="c-com">// staff-only, HQ — driver onboarding</span>
+    │   │   └── new_driver/      <span class="c-com">// calls RegisterNewDriver, binds device terminal</span>
+    │   └── agent_ops/            <span class="c-com">// staff-only, field — gated by agent login</span>
+    │       ├── new_passenger/   <span class="c-com">// calls RegisterPassenger</span>
+    │       └── lost_card/       <span class="c-com">// calls ReissueCard</span>
     ├── presentation/
     │   ├── screens/             <span class="c-com">// ShiftStartScreen, TapScreen, FallbackScreen, StatusScreen</span>
     │   └── widgets/             <span class="c-com">// session badge, connectivity indicator</span>
@@ -734,7 +1014,7 @@
 
     <div class="fix-box"><span class="tag">Why nonce generation lives client-side</span><p>The <code class="inline">nfc_tap</code> feature signs each nonce with the device-bound key before sending — a cloned request without the real key's signature gets rejected, even if it copies a nonce value.</p></div>
 
-    <h3>One app, not three</h3>
+    <h3>One app, not per-vehicle</h3>
     <p>Identity, session, device binding, the signed nonce, and fallback chain are identical across vehicle classes — forking them per vehicle would put the most security-sensitive code in multiple places. Only the trip-flow UI branches, via <code class="inline">vehicle.class</code>. Taxi gets no first-party UI here — per the T4 plan, taxi drivers stay on their existing partner app; this system only supplies identity verification behind the scenes.</p>
   </section>
 
@@ -764,7 +1044,9 @@
         <div class="stop-body">
           <ul>
             <li>Passenger enrollment via VSP + Moniepoint account link.</li>
-            <li>First Flutter build — NFC tap, fingerprint capture, session start screen.</li>
+            <li><code style="font-family:var(--font-mono);color:var(--teal);">auth/</code> live with two logins: Driver and Passenger — Student and mobile Admin follow once this base is proven.</li>
+            <li>First Flutter build — NFC tap, fingerprint capture, session start screen, all under <code style="font-family:var(--font-mono);color:var(--teal);">driver_home/</code>.</li>
+            <li><code style="font-family:var(--font-mono);color:var(--teal);">driver_home/bank_details</code> live — drivers self-link their payout account (<code style="font-family:var(--font-mono);color:var(--teal);">LinkDriverAccount</code>), closing the gap where nothing previously set one.</li>
             <li>Device terminals: budget Android phones (NFC + fingerprint built in) mounted on pilot Kekes.</li>
             <li>2–3 field agents deployed at the pilot corridor's terminal locations, running <code style="font-family:var(--font-mono);color:var(--teal);">agent_ops/</code> — registers passengers and reissues lost cards on the spot.</li>
             <li>HQ dashboard live in monitoring mode — driver positions, session status — plus the <code style="font-family:var(--font-mono);color:var(--teal);">ops/</code> new-driver flow.</li>
@@ -782,9 +1064,12 @@
         <div class="stop-body">
           <ul>
             <li>Formal terminal/geo-fence entities; entry/exit captured per trip.</li>
-            <li>React + Mapbox dashboard v1 — live map, session status, provisioning console.</li>
+            <li>React + Mapbox dashboard v1 — live map, session status, provisioning console, cross-role oversight.</li>
+            <li><code style="font-family:var(--font-mono);color:var(--teal);">student_home/</code> and the mobile <code style="font-family:var(--font-mono);color:var(--teal);">admin_home/</code> login added, once Driver/Passenger have proven the pattern in T1.</li>
             <li>USSD via Africa's Talking — balance check, account linking for non-smartphone users.</li>
-            <li>Expand to 5 major corridors — Fate Road, Offa Garage, Kulende, Asa Dam.</li>
+            <li><code style="font-family:var(--font-mono);color:var(--teal);">terminal_location</code> + <code style="font-family:var(--font-mono);color:var(--teal);">fare_rule</code> tables built — T1's single flat fare doesn't survive 5 corridors.</li>
+            <li>Fleet transitions to PAX A920 Pro — PAXSTORE registration/review run in parallel with earlier T2 work; <code style="font-family:var(--font-mono);color:var(--teal);">pin_match</code> session verification ships alongside it.</li>
+            <li>Expand to 5 major corridors — Fate Road, Offa Garage, Kulende, Asa Dam. A concrete T2 target, not a ceiling — <code style="font-family:var(--font-mono);color:var(--teal);">route</code> and <code style="font-family:var(--font-mono);color:var(--teal);">route_fare_tier</code> already support any number of corridors, in any state.</li>
             <li>Reconciliation view for fallback/cash events.</li>
           </ul>
           <div class="stop-stack"><span class="stack-chip">React</span><span class="stack-chip">Mapbox/Leaflet</span><span class="stack-chip">Go + Gin</span></div>
@@ -792,12 +1077,12 @@
       </div>
 
       <div class="stop" id="phase3">
-        <div class="stop-code">TERMINAL 3</div><h3>Feeder layer + investor mode</h3>
-        <div class="stop-meta">Motorcycles join, dashboard gets an investor-facing surface</div>
+        <div class="stop-code">TERMINAL 3</div><h3>Admin tooling + investor mode</h3>
+        <div class="stop-meta">Fare editing, extensible states/institutions, dashboard goes investor-facing</div>
         <div class="stop-body">
           <ul>
-            <li>Same Flutter app, same identity/session/binding model — new vehicle class only.</li>
-            <li>Multi-leg journeys: home → local terminal (bike) → main terminal (keke), linked as one journey.</li>
+            <li>Fare management live — <code style="font-family:var(--font-mono);color:var(--teal);">UpdateFare</code> + <code style="font-family:var(--font-mono);color:var(--teal);">fare_change_log</code>, so a union-negotiated fare change is an admin action, not a code deploy.</li>
+            <li>State &amp; institution management live — <code style="font-family:var(--font-mono);color:var(--teal);">AddState</code> / <code style="font-family:var(--font-mono);color:var(--teal);">AddInstitution</code>. Capability built now; actually operating in a second state stays a T5 business decision, not a T3 one.</li>
             <li>Deck.gl heatmap + revenue ticker + coverage growth slider — investor demo mode.</li>
             <li>Formal Keke cooperative onboarding; grant applications (Tony Elumelu, GIZ, NITDA).</li>
           </ul>
@@ -824,14 +1109,117 @@
         <div class="stop-meta">Multi-city, full intelligence layer</div>
         <div class="stop-body">
           <ul>
-            <li>Multi-city expansion on the same architecture — abstracted payment rails and modular localization from T1 pay off here.</li>
+            <li>Multi-state expansion using <code style="font-family:var(--font-mono);color:var(--teal);">AddState</code> (built in T3) — abstracted payment rails and modular localization from T1 pay off here. Institutions get added the same way, once real university data arrives.</li>
             <li>Dashboard grows into investigation/emergency-response tooling on the existing trip ledger.</li>
             <li>Direct NIMC accreditation worth pursuing once volume justifies it over the VSP.</li>
-            <li>Custom device terminal hardware (ESP32/RPi + PN532 + fingerprint module) worth evaluating once device cost at this scale outweighs the R&amp;D to build it.</li>
+            <li>ODM-customized or fully custom device terminal hardware — relationship-building starts informally in T2–T3; mandatory NCC type approval, optional PCI PTS certification for A920-level trust assurance.</li>
           </ul>
           <div class="stop-stack"><span class="stack-chip">Full stack, multi-region</span></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="layers">
+    <div class="section-label">Full production audit</div>
+    <h2>13-layer architecture map</h2>
+    <p>Everything built so far, checked against the thirteen layers a real production system needs — what's covered, what's partial, and what's a genuine gap with a concrete proposal, not just a name on a list.</p>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">01</span><span class="sec-phase-name">Frontend foundations</span><span class="layer-status covered">Covered</span></div>
+      <p style="margin:0;font-size:13.5px;">Flutter (four logins — Driver, Passenger, Student, Admin-mobile) + React (admin web dashboard). See "One App, Four Logins" and the Flutter Structure section. What's left is implementation, not design.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">02</span><span class="sec-phase-name">APIs &amp; backend logic</span><span class="layer-status covered">Covered</span></div>
+      <p style="margin:0;font-size:13.5px;">Go + Gin. Eleven pseudocode flows plus real working code (register, link-account, tap, trips, terminals) with the auth/transaction/shutdown fixes already applied. See the Pseudocode section.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">03</span><span class="sec-phase-name">Database &amp; storage</span><span class="layer-status covered">Covered</span></div>
+      <p style="margin:0;font-size:13.5px;">PostgreSQL + PostGIS, full schema across identity, session, terminal, credential, card_batch, and geo tables. See Data Model and Geospatial Layer.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">04</span><span class="sec-phase-name">Auth &amp; permissions</span><span class="layer-status partial">Partial</span></div>
+      <p style="margin:0 0 8px;font-size:13.5px;">Design is thorough — identity/session/device-binding, four-login role routing, RBAC on the admin dashboard (ops vs. super-admin). <strong>Gap:</strong> the real Go code only has the stopgap terminal-key check from the /tap fix — no JWT/session-token middleware yet for the four logins, no RBAC actually enforced in code. This is the real next code milestone, not just a design one.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">05</span><span class="sec-phase-name">Hosting &amp; deployment</span><span class="layer-status gap">Gap</span></div>
+      <ul class="checklist" style="margin-bottom:8px;">
+        <li>Go API in a Docker container — one multi-stage Dockerfile, small final image</li>
+        <li>T0–T2: a single DigitalOcean or Contabo droplet (~$6–12/mo) running the container behind the reverse proxy already planned for TLS</li>
+        <li>React dashboard on Vercel or Netlify's free tier — static build, zero-cost, CDN included for free (feeds layer 10)</li>
+        <li>Driver/agent Flutter apps: direct APK install for the pilot fleet — Play Store distribution is a later-phase decision, not a T1 blocker</li>
+      </ul>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">06</span><span class="sec-phase-name">Cloud &amp; computing</span><span class="layer-status gap">Gap</span></div>
+      <p style="margin:0 0 8px;font-size:13.5px;">A single droplet is "computing," not elastic "cloud" — that's fine for T0–T2. One upgrade worth making early: a <strong>managed Postgres</strong> (DigitalOcean Managed Database, or Supabase's hosted Postgres with PostGIS support) instead of self-managing Postgres on the same droplet — automatic backups and failover, real risk reduction for a solo builder, modest cost increase. True elastic compute (autoscaling instances) is a T4/T5 decision once multi-city traffic justifies it.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">07</span><span class="sec-phase-name">CI/CD &amp; version control</span><span class="layer-status partial">Partial</span></div>
+      <p style="margin:0 0 8px;font-size:13.5px;">Git/GitHub already in use. GitHub Actions already flagged for secret-scanning and vuln-scanning in the security checklist — extend into a real pipeline: push → <code class="inline">go vet</code> + <code class="inline">go build ./...</code> + tests → merge to main → build Docker image → deploy to the droplet. A simple SSH-deploy step is enough at T0–T2 scale; no need for a heavier CD tool yet.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">08</span><span class="sec-phase-name">Security &amp; row-level security</span><span class="layer-status partial">Partial</span></div>
+      <p style="margin:0 0 8px;font-size:13.5px;">General security is the most built-out part of this whole doc — see the Security Checklist and Tracker. <strong>Row-level security specifically</strong> is optional here, not primary: the Go API is the only thing that ever touches Postgres directly, so RLS would be defense-in-depth against a future authorization bug in Go, not the main control. Worth adding at T3+: enable RLS on <code class="inline">trip</code>/<code class="inline">identity</code>-adjacent tables, set a per-request session variable (<code class="inline">SET LOCAL app.current_driver_id</code>) inside each transaction, write policies against it as a safety net.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">09</span><span class="sec-phase-name">Rate limiting</span><span class="layer-status gap">Gap</span></div>
+      <p style="margin:0 0 10px;font-size:13.5px;">Was a checklist line item, never actually designed. Concrete proposal: a Gin middleware using <code class="inline">golang.org/x/time/rate</code> (token bucket), keyed per <code class="inline">terminal_id</code> on <code class="inline">/tap</code> and per-IP on public endpoints.</p>
+      <pre style="margin:0;"><code><span class="c-fn">func</span> RateLimitByTerminal() gin.HandlerFunc {
+    limiters := <span class="c-fn">sync.Map</span>{} <span class="c-com">// terminal_id → *rate.Limiter</span>
+    <span class="c-key">return func</span>(c *gin.Context) {
+        terminalID := c.PostForm(<span class="c-str">"terminal_id"</span>)
+        limiterAny, _ := limiters.LoadOrStore(terminalID, <span class="c-fn">rate.NewLimiter</span>(<span class="c-fn">rate.Every</span>(time.Second), 5)) <span class="c-com">// 5 taps/sec burst</span>
+        <span class="c-key">if</span> !limiterAny.(*rate.Limiter).Allow() {
+            c.AbortWithStatusJSON(<span class="c-fn">http.StatusTooManyRequests</span>, gin.H{<span class="c-str">"error"</span>: <span class="c-str">"slow down"</span>})
+            <span class="c-key">return</span>
+        }
+        c.Next()
+    }
+}</code></pre>
+      <p style="margin:10px 0 0;font-size:12.5px;color:var(--text-faint);">T2+: push this to the edge (Cloudflare free tier, or nginx <code class="inline">limit_req</code>) once a reverse proxy is already in front for TLS anyway.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">10</span><span class="sec-phase-name">Caching &amp; CDN</span><span class="layer-status gap">Gap</span></div>
+      <p style="margin:0;font-size:13.5px;">CDN comes free the moment the React dashboard is hosted on Vercel/Netlify (layer 5 decision). Caching is deliberately <strong>not</strong> for core transactional data — payment and session state must stay live, never cached. The legitimate target is the admin dashboard's aggregate queries (heatmap, corridor stats) — expensive, and don't need per-second freshness. In-memory cache with a 30–60s TTL is enough to start; Redis only once T3's investor-mode dashboard work makes it worth the extra infrastructure.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">11</span><span class="sec-phase-name">Load balancing &amp; scaling</span><span class="layer-status gap">Gap</span></div>
+      <p style="margin:0;font-size:13.5px;">Not needed at T0–T2 — a single instance is genuinely fine. One real gotcha worth knowing now, before it's a surprise: <code class="inline">/ws/map</code> doesn't horizontally scale for free. Multiple API instances need a shared pub/sub (Redis pub/sub is the standard fix) to fan out position updates across instances, or sticky sessions at the load balancer. This becomes real at T4/T5 multi-city scale-out, not before.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">12</span><span class="sec-phase-name">Error tracking &amp; logs</span><span class="layer-status partial">Partial</span></div>
+      <p style="margin:0;font-size:13.5px;">Mentioned in the security checklist (T3: alerting; T0: redacted structured logging) but never specced with real tools. Concrete proposal: <strong>Sentry's free tier</strong> (solid Go SDK) for error tracking from T1, not T3 — cheap enough to not wait on. <strong>Structured logging</strong> via Go's standard <code class="inline">log/slog</code> (stdlib, zero new dependency), with the redaction middleware the T0 checklist already calls for. Log viewing via the droplet's journald is enough until multi-instance (layer 11) makes a hosted aggregator worth it.</p>
+    </div>
+
+    <div class="sec-phase">
+      <div class="sec-phase-head"><span class="layer-num">13</span><span class="sec-phase-name">Availability &amp; recovery</span><span class="layer-status partial">Partial</span></div>
+      <p style="margin:0 0 10px;font-size:13.5px;">The open gaps list already has "backup and DR tested" at T5 — that's correctly late <em>for formal drills</em>, but the cheap basics shouldn't wait that long. Move these to T1:</p>
+      <ul class="checklist" style="margin-bottom:10px;">
+        <li>A <code class="inline">/health</code> endpoint — nothing to point a load balancer or uptime monitor at right now</li>
+        <li>Automated nightly <code class="inline">pg_dump</code> — losing pilot data to a disk failure with zero backups is a real risk even at small scale, not just a "later" concern</li>
+        <li>A free uptime monitor (UptimeRobot) pinging <code class="inline">/health</code></li>
+      </ul>
+      <pre style="margin:0;"><code><span class="c-com">// add alongside the existing routes in cmd/api/main.go</span>
+router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span class="c-key">func</span>(c *gin.Context) {
+    <span class="c-key">if</span> err := app.Conn.PingContext(c.Request.Context()); err != nil {
+        c.JSON(<span class="c-fn">http.StatusServiceUnavailable</span>, gin.H{<span class="c-str">"status"</span>: <span class="c-str">"db unreachable"</span>})
+        <span class="c-key">return</span>
+    }
+    c.JSON(<span class="c-fn">http.StatusOK</span>, gin.H{<span class="c-str">"status"</span>: <span class="c-str">"ok"</span>})
+})</code></pre>
+      <p style="margin:10px 0 0;font-size:12.5px;color:var(--text-faint);">Formal RTO/RPO targets and a full multi-region DR drill stay a T4/T5 exercise, unchanged — that part of the sequencing was already right.</p>
     </div>
   </section>
 
@@ -850,6 +1238,8 @@
         <li>Structured logging that <strong>redacts</strong> sensitive fields — biometric hashes, tokens, and account numbers never hit plaintext logs</li>
         <li>Separate credentials for sandbox vs. production — a leaked sandbox key should never be able to touch real money</li>
         <li>Nonce table + audit log table designed now, not bolted on later</li>
+        <li>Graceful shutdown on SIGINT/SIGTERM — in-flight requests drained, not killed mid-request on every deploy</li>
+        <li>API server has real TLS termination — a reverse proxy or direct cert config, not plain HTTP</li>
       </ul>
     </div>
 
@@ -859,10 +1249,13 @@
         <li>Raw fingerprint scans discarded immediately after hashing — never written to disk or logs, even temporarily</li>
         <li>VSP and Moniepoint calls wired behind interfaces (<code class="inline">IdentityVerifier</code>, <code class="inline">PaymentProcessor</code>) via dependency injection — lets you test failure modes (timeout, rejected verification, double-spend attempt) without hitting real services</li>
         <li><strong>Moniepoint webhook signature verification</strong> — if you consume webhooks for settlement confirmation, verify the HMAC signature on every incoming webhook or you're trusting unauthenticated POST requests to confirm real payments</li>
-        <li>Idempotency keys on every Moniepoint call (trip_id + timestamp) — already in your pseudocode, don't skip it under deadline pressure</li>
+        <li>Idempotency key on every Moniepoint call — the tap's nonce, not trip_id (trip_id doesn't exist yet at the moment the call needs to be idempotent). See pseudocode block 4.</li>
+        <li>Short-window duplicate-tap check (<code class="inline">FindRecentSuccessfulTrip</code>) — catches a second genuinely different tap for the same boarding event, which nonce replay checking alone does not.</li>
         <li>Gin binding + validation tags on every request struct — reject malformed input at the handler boundary, before it reaches business logic</li>
         <li>Rate limiting on <code class="inline">/tap</code> and <code class="inline">/location</code> — per-terminal and per-IP, so one compromised device can't hammer the API</li>
         <li>Dependency vulnerability scanning in CI — <code class="inline">go mod audit</code> equivalent (govulncheck), <code class="inline">flutter pub outdated</code> / audit for Dart packages</li>
+        <li><code class="inline">/tap</code> requires a valid terminal credential — knowing a <code class="inline">terminal_id</code> alone isn't enough to authorize a trip</li>
+        <li>The tap flow runs inside a real DB transaction with rollback on failure, not a sequence of independent inserts</li>
       </ul>
     </div>
 
@@ -879,7 +1272,7 @@
     </div>
 
     <div class="sec-phase">
-      <div class="sec-phase-head"><span class="sec-phase-code">T3</span><span class="sec-phase-name">Feeder layer + investor mode</span></div>
+      <div class="sec-phase-head"><span class="sec-phase-code">T3</span><span class="sec-phase-name">Admin tooling + investor mode</span></div>
       <ul class="checklist">
         <li>Key rotation policy for device-bound signing keys — define how a terminal's key gets rotated without a full re-provisioning trip</li>
         <li>Error tracking + alerting wired up (Sentry or similar) — you want to know about failed verifications and rollbacks before a driver complains</li>
@@ -947,15 +1340,26 @@
         ["t0-logs","Structured logging that redacts sensitive fields"],
         ["t0-envsep","Separate credentials for sandbox vs. production"],
         ["t0-noncetable","Nonce table + audit log table designed up front"],
+        ["t0-health","/health endpoint exists — pings DB, returns real status"],
+        ["t0-cicd","CI pipeline: build + vet + test on every push"],
+        ["t0-hosting","Hosting target chosen and deployed (Docker on a droplet, TLS via reverse proxy)"],
+        ["t0-graceful-shutdown","Graceful shutdown on SIGINT/SIGTERM — in-flight requests drained, not killed"],
+        ["t0-tls-server","API server has TLS termination (reverse proxy or direct) — not serving plain HTTP"],
       ]},
       { phase: "T1", name: "MVP", items: [
         ["t1-rawscan","Raw fingerprint scans discarded immediately after hashing"],
         ["t1-di","VSP and Moniepoint calls wired behind injected interfaces"],
         ["t1-webhook","Moniepoint webhook signature verification"],
-        ["t1-idempotency","Idempotency keys on every Moniepoint call"],
+        ["t1-idempotency","Idempotency key on every Moniepoint call — the nonce, not trip_id"],
+        ["t1-duptap","Short-window duplicate-tap check catches a second distinct tap for the same boarding event"],
         ["t1-validation","Gin binding + validation tags on every request struct"],
         ["t1-ratelimit","Rate limiting on /tap and /location"],
         ["t1-vulnscan","Dependency vulnerability scanning (govulncheck, pub audit)"],
+        ["t1-tap-auth","/tap rejects requests with no valid terminal credential — not open to anyone who knows a terminal_id"],
+        ["t1-tx-wrap","Tap flow wrapped in a real DB transaction with rollback, not independent inserts"],
+        ["t1-backups","Automated nightly Postgres backup running"],
+        ["t1-uptime","Free uptime monitor pinging /health"],
+        ["t1-alerting","Error tracking wired up (Sentry or similar) — pulled forward from T3, cheap enough not to wait"],
       ]},
       { phase: "T2", name: "Terminal network + dashboard", items: [
         ["t2-adminauth","Admin auth stronger than driver session auth"],
@@ -965,11 +1369,14 @@
         ["t2-csrf","CSRF protection (or bearer tokens instead of cookies)"],
         ["t2-audit","Audit log extended to every privileged action"],
       ]},
-      { phase: "T3", name: "Feeder layer + investor mode", items: [
+      { phase: "T3", name: "Admin tooling + investor mode", items: [
         ["t3-keyrotation","Key rotation policy for device-bound signing keys"],
-        ["t3-alerting","Error tracking + alerting wired up"],
+        ["t3-caching","Short-TTL cache on dashboard aggregate queries (heatmap, corridor stats)"],
+        ["t3-rls","Row-level security enabled as defense-in-depth on trip/identity tables"],
         ["t3-dpia","NDPR data protection impact assessment written"],
         ["t3-anomaly","Anomaly thresholds tuned against real false-positive rates"],
+        ["t3-farearedit","UpdateFare + fare_change_log live — fare changes are an admin edit, not a redeploy"],
+        ["t3-statemgmt","AddState / AddInstitution built — expansion is a row insert, not a schema change"],
       ]},
       { phase: "T4", name: "Partner integration", items: [
         ["t4-partnerauth","Partner API uses its own auth scheme, separate from driver/passenger tokens"],
@@ -977,6 +1384,7 @@
         ["t4-waf","WAF / DDoS protection in front of the public API"],
         ["t4-pentest","Third-party penetration test completed"],
         ["t4-incident","Incident response plan written down"],
+        ["t4-ws-scale","Redis pub/sub (or sticky sessions) in place before /ws/map runs on more than one API instance"],
       ]},
       { phase: "T5", name: "City OS", items: [
         ["t5-backup","Backup and disaster recovery tested with real drills"],
@@ -1002,7 +1410,8 @@
         ["g-integration-tests","Integration tests for the full tap→debit→payout chain"],
         ["g-load-tests","Load testing for simultaneous rush-hour taps"],
         ["g-device-tests","Device testing across real cheap Android hardware"],
-        ["g-fare-engine","Fare table replacing the flat ₦200 rate before T2"],
+        ["g-fare-engine","route_fare_tier stop-count pricing built — no per-pair fare rows to maintain (designed, not yet in code)"],
+        ["g-fare-picker","Route/route_stop/session.route_id built — daily driver route choice + scoped picker (designed, not yet in code)"],
         ["g-settlement","Daily settlement reports built"],
         ["g-payout-statements","Driver payout statements a driver can read"],
         ["g-tax","Tax/reporting obligations on platform fee income identified"],
@@ -1125,12 +1534,12 @@
     <div class="sec-phase">
       <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Fare engine</span></div>
       <ul class="checklist">
-        <li>Move off a flat ₦200 fare before multi-corridor expansion (T2) — route or distance-band based fare table</li>
+        <li>Stop-count fare tiering built — designed (see the Fare Engine section: <code class="inline">route_stop</code>, <code class="inline">route_fare_tier</code>, <code class="inline">GetFare</code>), not yet implemented in code</li>
+        <li>Daily driver route choice + scoped destination picker — <code class="inline">session.route_id</code>, not a fixed vehicle assignment</li>
       </ul>
     </div>
 
-    <div class="sec-phase">
-      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Financial reconciliation &amp; reporting</span></div>
+    <div class="sec-phase">      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Financial reconciliation &amp; reporting</span></div>
       <ul class="checklist">
         <li>Daily settlement reports</li>
         <li>Driver payout statements a driver can actually read</li>
