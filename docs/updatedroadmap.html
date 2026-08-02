@@ -396,7 +396,7 @@
     <p><span style="color:var(--teal);font-family:var(--font-mono);">session</span> and the binding fields on <span style="color:var(--teal);font-family:var(--font-mono);">terminal</span> close the two gaps above. Geo fields on <span style="color:var(--green);font-family:var(--font-mono);">trip</span> and the two new geospatial tables power the map and analytics.</p>
     <p style="font-size:12.5px;color:var(--text-faint);">Naming fix: <code class="inline">terminal</code> is a driver's physical device (hardware_serial, bound to one driver). <code class="inline">terminal_location</code> is a place — Tanke, Challenge. <code class="inline">trip.entry/exit_terminal_id</code> used to blur these; now corrected to reference the place, since fares are about routes between places, not which device facilitated the tap.</p>
     <div class="schema">
-      <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | agent | <span class="fk">student</span></li><li>institution_id <span class="fk">→ institution, nullable — student only, TBD what it gates</span></li><li>last_verified_at</li></ul></div>
+      <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | agent | student</li><li>admin_tier: ops | super_admin <span class="fk">// role=operator only</span></li><li>institution_id <span class="fk">→ institution, nullable — student only, TBD what it gates</span></li><li>last_verified_at</li></ul></div>
       <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>type: card | <span class="fk">phone_hce</span></li><li>card_uid <span class="fk">// type=card only</span></li><li>device_public_key <span class="fk">// type=phone_hce only</span></li><li>status: active | void | reissued</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li></ul></div>
       <div class="entity new-entity"><h4>card_batch <span class="fk">(agent accounting)</span></h4><ul><li>id (pk)</li><li>agent_id <span class="fk">→ identity (agent)</span></li><li>quantity_allocated</li><li>quantity_returned</li><li>quantity_damaged</li><li>status: open | reconciled | discrepancy</li><li>allocated_at, reconciled_at, reconciled_by_admin_id</li></ul></div>
       <div class="entity new-entity"><h4>session <span class="fk">(fix 1)</span></h4><ul><li>id (pk)</li><li>driver_identity_id <span class="fk">→ identity</span></li><li>terminal_id <span class="fk">→ terminal</span></li><li>route_id <span class="fk">→ route // driver's choice for THIS shift, not fixed</span></li><li>token, started_at, expires_at</li><li>verify_method: local_match | live_reverify</li><li>status: active | expired | flagged</li></ul></div>
@@ -940,8 +940,43 @@
       <li><strong>State &amp; institution management</strong> — <code class="inline">AddState</code> / <code class="inline">AddInstitution</code>. Expanding to a new state is adding a row, not changing the schema — the extensibility this whole architecture was built for.</li>
       <li><strong>Reconciliation view</strong> — every fallback-to-cash event and card batch discrepancy. <strong>Web only</strong>, same reasoning.</li>
       <li><strong>Payout resend</strong> — for the rare "driver says they didn't receive it" case, reuses the original trip's nonce as the idempotency key, never a fresh transfer. This is the manual-side counterpart to the automated double-charge protection in <code class="inline">AuthorizeTrip</code> — see Section 13 of the Engineering Guide.</li>
+      <li><strong>Admin account management</strong> — <code class="inline">InviteAdmin</code>, super-admin only. There is no public registration path, ever — see below.</li>
     </ul>
-    <p style="font-size:12.5px;color:var(--text-faint);">The mobile Admin login (see "One App, Four Logins" above) mirrors the live map and cross-role oversight for on-the-go checking — it deliberately excludes the provisioning console and reconciliation view, which stay privileged-web-only.</p>
+
+    <h3>How admin actually gets accessed</h3>
+    <p>A separate URL entirely — its own subdomain, never linked from the customer app, the marketing site, or anywhere public (though worth knowing: an unlisted subdomain still shows up in public certificate transparency logs the moment it gets an SSL cert — this is mild deterrence, not real protection; 2FA and zero public registration are what's actually doing the work). RBAC is now a real schema field, not just a checklist line: <code class="inline">identity.admin_tier</code> — <code class="inline">ops</code> gets monitoring and read access, <code class="inline">super_admin</code> gets provisioning, fare edits, and everything privileged.</p>
+
+    <h3>Login: WebAuthn/passkeys, not just password + 2FA</h3>
+    <p>Login uses the fingerprint or face sensor already built into the admin's own laptop or phone — Touch ID, Windows Hello, Android's sensor — via the WebAuthn standard. The device generates a private/public key pair; the private key never leaves the device's own secure hardware. Logging in signs a server challenge with that key after a local biometric unlock. <strong>The biometric itself never touches the server</strong> — only a signed cryptographic proof does.</p>
+
+    <div class="fix-box">
+      <span class="tag">This isn't a new pattern — it's the same one already proven elsewhere in this system</span>
+      <p>Device-bound private key, signed challenge-response, biometric never transmitted — this is exactly the mechanism already built for driver terminal device binding and the phone-tap (HCE) design. Admin login reuses a pattern this architecture already trusts, rather than inventing a fourth one. It's also phishing-resistant in a way passwords and SMS codes aren't: the signature is cryptographically bound to the real domain, so a convincing fake login page can't extract a valid one.</p>
+    </div>
+
+    <p style="font-size:13px;">Password + 2FA remains the fallback for any device without biometric hardware — not removed, just no longer the primary path. <strong>Hardware security keys</strong> (YubiKey-style, tapped to confirm login) are worth adding as a stronger optional layer for <code class="inline">super_admin</code> specifically, once that circle is small and stable enough to issue physical keys to — real cost per device, only worth it once who holds super-admin isn't still shifting.</p>
+
+    <div class="callout">
+      <span class="tag">Considered and deliberately rejected: retina scanning, or any server-side admin biometric store</span>
+      <p>Real technology, but it needs dedicated scanner hardware nobody's laptop or phone has — issuing specialized peripherals to admins for marginal gain over WebAuthn isn't worth it, and it breaks checking the dashboard from a phone entirely. More importantly: this platform's whole biometric model deliberately never stores raw biometrics — NIMC/VSP is the external authority, the platform only ever receives a token back. A server-side admin fingerprint database would recreate exactly the centralized biometric honeypot risk the rest of this design goes out of its way to avoid. WebAuthn gets the security benefit without the platform ever becoming a biometric custodian for its own staff.</p>
+    </div>
+
+    <div class="fix-box">
+      <span class="tag">No public registration, ever — the bootstrap problem and how it's solved</span>
+      <p>Every admin account has to come from somewhere, but there's no "sign up" form — that would let anyone self-grant access to live driver GPS and fare-editing power. <strong>The first account</strong> is created once, directly, via a deployment script when the system stands up — not through the app, since the app has no admin yet to authorize creating one. <strong>Every account after that</strong> is invited by an existing super-admin from inside the dashboard — an invite token, emailed, the new admin registers a passkey (or falls back to password + 2FA) on first use. No self-service path exists at any point after bootstrap.</p>
+    </div>
+
+    <pre><code><span class="c-com">// super_admin only — inviting is itself a privileged action, logged like any other</span>
+<span class="c-fn">func</span> InviteAdmin(email, adminTier string, invitedByAdminID string) error {
+    inviter := <span class="c-fn">db.GetIdentity</span>(invitedByAdminID)
+    <span class="c-key">if</span> inviter.AdminTier != <span class="c-str">"super_admin"</span> { <span class="c-key">return</span> <span class="c-fn">errors.New</span>(<span class="c-str">"only super_admin can invite"</span>) }
+
+    token := <span class="c-fn">generateSecureInviteToken</span>()
+    <span class="c-fn">db.CreatePendingAdminInvite</span>(email, adminTier, token, invitedByAdminID)
+    <span class="c-key">return</span> <span class="c-fn">sendInviteEmail</span>(email, token) <span class="c-com">// recipient registers a passkey (WebAuthn) or falls back to password + 2FA; token expires</span>
+}</code></pre>
+
+    <p style="font-size:12.5px;color:var(--text-faint);">Not needed yet, worth knowing about: IP allowlisting or VPN-gating the admin subdomain entirely is a real hardening option once the team and the attack surface both grow — same T4/T5 timing logic as the WAF and penetration test already in the security checklist. Adding it now, at pilot scale with a handful of staff, would mostly just make it harder for ops to check something quickly from their phone.</p>
   </section>
 
   <section id="flutter">
@@ -1264,7 +1299,8 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
       <ul class="checklist">
         <li>Admin auth is <strong>stronger</strong> than driver session auth — this console can rebind terminals and see the full trip ledger</li>
         <li>Role-based access on the dashboard — ops vs. super-admin, since rebind and reconciliation actions shouldn't be available to every logged-in staff member</li>
-        <li>Two-factor authentication on admin accounts specifically</li>
+        <li>WebAuthn/passkey login for admin accounts — device biometric, private key never leaves the device — password + 2FA as fallback for devices without biometric hardware</li>
+        <li>Hardware security key option for super_admin, once that circle is stable enough to issue physical keys to</li>
         <li>CORS locked down on the Go API — only the admin dashboard's actual origin, not a wildcard</li>
         <li>CSRF protection on the React dashboard if using cookie-based sessions (or stick to bearer tokens in headers to sidestep it)</li>
         <li>Audit log extended to <strong>every</strong> privileged action, not just terminal rebinds — who did what, when, from where</li>
@@ -1364,7 +1400,9 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
       { phase: "T2", name: "Terminal network + dashboard", items: [
         ["t2-adminauth","Admin auth stronger than driver session auth"],
         ["t2-rbac","Role-based access — ops vs. super-admin"],
-        ["t2-2fa","Two-factor authentication on admin accounts"],
+        ["t2-2fa","WebAuthn/passkey login for admin (device biometric, key never leaves device) — password + 2FA as fallback"],
+        ["t2-hwkey","Hardware security key option evaluated for super_admin once that circle is stable"],
+        ["t2-bootstrap","Admin bootstrap script exists; zero public registration path confirmed"],
         ["t2-cors","CORS locked to the dashboard's real origin"],
         ["t2-csrf","CSRF protection (or bearer tokens instead of cookies)"],
         ["t2-audit","Audit log extended to every privileged action"],
