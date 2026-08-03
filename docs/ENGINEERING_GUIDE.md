@@ -153,6 +153,23 @@ This is what lets the exact same repository code run standalone *or* inside a `d
 - Don't add a new package-level `var` for anything that isn't a genuine constant.
 - Don't call `vsp.VerifyFingerprint` or `moniepoint.Transfer` directly from a handler — always through the injected interface (`IdentityVerifier`, `PaymentProcessor`), so tests can substitute a fake.
 
+**The convention for any handler that overwrites a value someone might contest later:** this has now shown up independently in `UpdateFare`, `RebindTerminal`, and card batch reconciliation — that's not a coincidence, it's a real pattern. Any privileged write that changes a value (not just creates a new row) follows this shape, not a bare `UPDATE`:
+
+```go
+func UpdateSomething(id string, newValue T, adminID, reason string) error {
+    return db.WithTx(func(tx) error {
+        oldValue := db.GetCurrentValue(tx, id)
+        if err := db.SetValue(tx, id, newValue); err != nil { return err }
+        return db.InsertChangeLog(tx, ChangeLog{
+            EntityID: id, OldValue: oldValue, NewValue: newValue,
+            ChangedBy: adminID, Reason: reason, ChangedAt: time.Now(),
+        })
+    })
+}
+```
+
+Old value captured, new value applied, both logged, atomically. If you're writing a new admin action that changes something rather than adding something, use this shape by default — don't invent a fourth slightly different version of it.
+
 ---
 
 ## 3. Database & Storage
@@ -173,11 +190,14 @@ This is what lets the exact same repository code run standalone *or* inside a `d
 - Geometry columns are `geometry(Point, 4326)` or `geometry(LineString, 4326)` — 4326 (WGS84) always, don't mix SRIDs.
 - Spatial queries use `ST_DWithin` with `::geography` casts for real-world distance, not raw `ST_Distance` on `geometry` — the latter gives you degrees, not meters, and it's a subtle bug that only shows up when someone eyeballs the numbers and they look wrong.
 
+**Naming trap to know about — `terminal` vs `terminal_location`:**
+These mean genuinely different things and the confusion is easy to reintroduce in code even after it's been fixed in the docs. `terminal` is a driver's physical device (`hardware_serial`, bound to one driver). `terminal_location` is a place — Tanke, Challenge. If you're naming a variable, a function parameter, or a column and you write bare `terminal` or `terminalID`, stop and ask which one you mean — then name it `deviceTerminalID` or `terminalLocationID` explicitly. This exact ambiguity already caused real confusion in the architecture doc's own roadmap section; don't let it happen again in code where it's harder to spot.
+
 ---
 
 ## 4. Auth & Permissions
 
-*(This is currently the weakest-built layer in the real codebase — the stopgap terminal-key check exists, but full session/role middleware for the four logins doesn't yet. Whoever picks this up next should read this section closely.)*
+*(Design here is now thorough — session middleware for the four customer logins, plus the full admin access model below — but almost none of it is in the real codebase yet, which still only has the stopgap terminal-key check from the `/tap` fix. Whoever picks this up next has a clear spec to build against, not a blank page.)*
 
 **Every protected route needs middleware, not an inline check.** Don't write `if session.Role != "driver" { ... }` inside a handler body — that pattern gets copy-pasted inconsistently as routes grow. Middleware, applied at route registration:
 
@@ -186,7 +206,17 @@ router.POST("/tap", RequireRole("driver"), app.tapHandler)
 router.POST("/admin/rebind", RequireRole("admin"), RequireAudit(), app.rebindHandler)
 ```
 
-**RBAC on the admin side is ops vs. super-admin** — don't collapse this into a single "is admin" boolean. Terminal rebind and card batch reconciliation need `super_admin`; read-only dashboard views need only `ops`.
+**RBAC on the admin side is ops vs. super-admin** — don't collapse this into a single "is admin" boolean. Terminal rebind and card batch reconciliation need `super_admin`; read-only dashboard views need only `ops`. The field is `identity.admin_tier`, checked the same middleware way as any other role:
+
+```go
+router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), app.rebindHandler)
+```
+
+**There is no public admin registration endpoint. Ever.** Don't add one, even a "temporary" one for testing — this is the single easiest way to accidentally let anyone self-grant access to live driver GPS and fare-editing power. The only two ways an admin account gets created:
+1. The first account, via a one-time deployment script, not through the running app.
+2. Every account after that, through `InviteAdmin` — callable only by an existing `super_admin`, and itself a logged, audited action like any other privileged one.
+
+**WebAuthn/passkey login — use a real library, don't hand-roll the verification.** The challenge-response signature check in `VerifyPasskeyLogin` has known, easy-to-get-wrong edge cases (challenge replay, origin binding) that a maintained library handles correctly. This is exactly the kind of security-critical code where "I'll just implement the spec myself" is how a subtle vulnerability gets shipped — use `go-webauthn` or equivalent, don't write the signature verification from scratch.
 
 **Session tokens are never logged**, not even at debug level. If you need to debug a session issue, log the session *ID*, never the token itself.
 
@@ -307,6 +337,8 @@ router.GET("/health", func(c *gin.Context) {
 ```
 
 **Backups are verified, not just scheduled.** A cron job that's been silently failing for two months isn't a backup — if you're touching backup infrastructure, confirm a restore actually works, don't just confirm the job runs.
+
+**Manual payout retries reuse the original idempotency key — never a fresh transfer.** If ops needs to resend a payout because a driver says they didn't receive it, that action calls `moniepoint.Transfer` with the *original trip's nonce* as the idempotency key, exactly like the automated path. A fresh ad-hoc transfer with no idempotency key is how a driver ends up paid twice for one trip — this is a real operational failure mode, not a hypothetical one, and it happens through good intentions ("let me just fix this for them quickly"), not carelessness.
 
 ---
 
