@@ -15,4 +15,5 @@ type Terminal struct {
 	LastLat      *float64   `json:"last_lat"`
 	LastLng      *float64   `json:"last_lng"`
 	LastSeenAt   *time.Time `json:"last_seen_at"`
+	IsActive     bool       `json:"is_active"`
 }

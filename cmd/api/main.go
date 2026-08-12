@@ -97,9 +97,7 @@ func (app *App) linkAccountHandler(c *gin.Context) {
 
 	passengerID, err := uuid.Parse(input.PassengerID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid passenger_id",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid passenger_id"})
 		return
 	}
 
