@@ -1,6 +1,6 @@
 # Engineering Guide — Alabaster Smart Mobility
 
-This is the guide every developer on this project follows — backend, Flutter, and React. The **master architecture doc** (`transport-intelligence-roadmap.html`) explains *what* we're building and *why*. This guide explains *how to write the code* so that a growing team stays consistent, and a security-critical payments system doesn't accumulate inconsistent patterns as more people touch it.
+This is the guide every developer on this project follows — backend, Flutter, and React. The **master architecture doc** (`ASM guide.html`) explains *what* we're building and *why*. This guide explains *how to write the code* so that a growing team stays consistent, and a security-critical payments system doesn't accumulate inconsistent patterns as more people touch it.
 
 If something here conflicts with the architecture doc, the architecture doc wins on *design decisions* (schema, flows, sequencing) — this guide wins on *how you write the code that implements those decisions*.
 
@@ -355,7 +355,7 @@ router.GET("/health", func(c *gin.Context) {
 
 ## Appendix B: New Developer Onboarding
 
-1. Read the master architecture doc (`transport-intelligence-roadmap.html`) — the schema, the pseudocode flows, the security fixes and *why* they exist.
+1. Read the master architecture doc (`ASM guide.html`) — the schema, the pseudocode flows, the security fixes and *why* they exist.
 2. Read this guide, Section 0 twice.
 3. Set up dev environment against **staging**, never production, and confirm `DATABASE_URL` points where you think it does before running anything.
 4. Your first PR should be small and touch exactly one layer — this is a better way to learn the conventions than reading about them.
