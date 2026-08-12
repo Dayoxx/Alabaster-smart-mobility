@@ -58,6 +58,7 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
+//Registerhandler
 func (app *App) registerHandler(c *gin.Context) {
 	var input struct {
 		Phone    string `json:"phone" binding:"required"`
@@ -70,7 +71,7 @@ func (app *App) registerHandler(c *gin.Context) {
 	}
 
 	newUser := models.User{
-		ID: uuid.New().String(), Phone: input.Phone, FullName: input.FullName,
+		ID: uuid.New(), Phone: input.Phone, FullName: input.FullName,
 		Role: input.Role, CreatedAt: time.Now(),
 	}
 	saved, err := app.Users.Create(c.Request.Context(), newUser)
@@ -81,6 +82,37 @@ func (app *App) registerHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, saved)
 }
 
+// func (app *App) linkAccountHandler(c *gin.Context) {
+// 	var input struct {
+// 		PassengerID   string `json:"passenger_id" binding:"required"`
+// 		AccountNumber string `json:"account_number" binding:"required"`
+// 		BankCode      string `json:"bank_code" binding:"required"`
+// 		BankName      string `json:"bank_name" binding:"required"`
+// 	}
+// 	if err := c.ShouldBindJSON(&input); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	existingCount, err := app.Accounts.CountByPassenger(c.Request.Context(), input.PassengerID)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check existing accounts"})
+// 		return
+// 	}
+
+// 	newAccount := models.PassengerAccount{
+// 		ID: uuid.New(), PassengerID: PassengerID, AccountNumber: input.AccountNumber,
+// 		BankCode: input.BankCode, BankName: input.BankName, PriorityOrder: existingCount + 1, IsActive: true,
+// 	}
+// 	saved, err := app.Accounts.Create(c.Request.Context(), newAccount)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not link account"})
+// 		return
+// 	}
+// 	c.JSON(http.StatusCreated, saved)
+// }
+
+//linkaccounthandler
 func (app *App) linkAccountHandler(c *gin.Context) {
 	var input struct {
 		PassengerID   string `json:"passenger_id" binding:"required"`
@@ -88,29 +120,55 @@ func (app *App) linkAccountHandler(c *gin.Context) {
 		BankCode      string `json:"bank_code" binding:"required"`
 		BankName      string `json:"bank_name" binding:"required"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	existingCount, err := app.Accounts.CountByPassenger(c.Request.Context(), input.PassengerID)
+	passengerID, err := uuid.Parse(input.PassengerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check existing accounts"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid passenger_id",
+		})
+		return
+	}
+
+	existingCount, err := app.Accounts.CountByPassenger(
+		c.Request.Context(),
+		passengerID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not check existing accounts",
+		})
 		return
 	}
 
 	newAccount := models.PassengerAccount{
-		ID: uuid.New().String(), PassengerID: input.PassengerID, AccountNumber: input.AccountNumber,
-		BankCode: input.BankCode, BankName: input.BankName, PriorityOrder: existingCount + 1, IsActive: true,
+		ID:            uuid.New(),
+		PassengerID:   passengerID,
+		AccountNumber: input.AccountNumber,
+		BankCode:      input.BankCode,
+		BankName:      input.BankName,
+		PriorityOrder: existingCount + 1,
+		IsActive:      true,
 	}
-	saved, err := app.Accounts.Create(c.Request.Context(), newAccount)
+
+	saved, err := app.Accounts.Create(
+		c.Request.Context(),
+		newAccount,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not link account"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not link account",
+		})
 		return
 	}
+
 	c.JSON(http.StatusCreated, saved)
 }
-
+//Tap handler
 func (app *App) tapHandler(c *gin.Context) {
 	var input struct {
 		PassengerID string  `json:"passenger_id" binding:"required"`
@@ -149,7 +207,7 @@ func (app *App) tapHandler(c *gin.Context) {
 	driverPayout := input.Amount - platformFee
 
 	newTrip := models.Trip{
-		ID: uuid.New().String(), PassengerID: input.PassengerID, DriverID: terminal.DriverID,
+		ID: uuid.New(), PassengerID: input.PassengerID, DriverID: terminal.DriverID,
 		TerminalID: input.TerminalID, FareAmount: input.Amount, DriverPayout: driverPayout,
 		PlatformFee: platformFee, PickupLat: input.Lat, PickupLng: input.Lng,
 		Status: "success", TappedAt: time.Now(),
@@ -203,7 +261,7 @@ func (app *App) terminalHandler(c *gin.Context) {
 	}
 
 	newTerminal := models.Terminal{
-		ID: uuid.New().String(), DriverID: input.DriverID, DeviceSerial: input.DeviceSerial,
+		ID: uuid.New(), DriverID: input.DriverID, DeviceSerial: input.DeviceSerial,
 		VehiclePlate: input.VehiclePlate, TerminalType: input.TerminalType,
 		LastLat: input.LastLat, LastLng: input.LastLng, LastSeenAt: time.Now(), IsActive: true,
 	}

@@ -43,7 +43,7 @@ lib/
 │   │   └── vehicle_mode/keke/
 │   ├── passenger_home/
 │   ├── student_home/
-│   ├── admin_home/       # mobile, monitoring-only — never build privileged actions here
+│   ├── admin_home/       # mobile, monitori-only — never build privileged actions here
 │   ├── ops/               # staff-only, HQ
 │   └── agent_ops/         # staff-only, field
 ├── presentation/
