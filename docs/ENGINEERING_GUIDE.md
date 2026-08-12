@@ -1,4 +1,4 @@
-# Engineering Guide — Ilorin Transport Intelligence Platform
+# Engineering Guide — Alabaster Smart Mobility
 
 This is the guide every developer on this project follows — backend, Flutter, and React. The **master architecture doc** (`transport-intelligence-roadmap.html`) explains *what* we're building and *why*. This guide explains *how to write the code* so that a growing team stays consistent, and a security-critical payments system doesn't accumulate inconsistent patterns as more people touch it.
 
