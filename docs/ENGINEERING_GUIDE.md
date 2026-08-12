@@ -2,17 +2,17 @@
 
 This is the guide every developer on this project follows backend, Flutter, and React. The **master architecture doc** (`ASM guide.html`) explains *what* we're building and *why*. This guide explains *how to write the code* so that a growing team stays consistent, and a security-critical payments system doesn't accumulate inconsistent patterns as more people touch it.
 
-If something here conflicts with the architecture doc, the architecture doc wins on *design decisions* (schema, flows, sequencing) — this guide wins on *how you write the code that implements those decisions*.
+If something here conflicts with the architecture doc, the architecture doc wins on *design decisions* (schema, flows, sequencing) this guide wins on *how you write the code that implements those decisions*.
 
 ---
 
 ## 0. Before you write a line of code
 
-**Golden rules — these are non-negotiable, not style preferences:**
+**Golden rules these are non-negotiable, not style preferences:**
 
 1. **Never touch `*sql.DB` directly in a handler.** Always go through a repository interface. This is the dependency injection seam that makes the whole system testable — breaking it once means every test after that has to hit a real database.
-2. **Never store mutable state in a package-level variable.** The original prototype had `var Users = []User{}` — a global slice mutated across goroutines with zero locking. It was a real, live data race. It's also the exact pattern that makes horizontal scaling (Layer 11) impossible later. If you're tempted to write `var something = []Thing{}` at package scope, stop — that state belongs in Postgres or nowhere.
-3. **Every query is parameterized.** `$1, $2...` — never string concatenation, never `fmt.Sprintf` into SQL, ever.
+2. **Never store mutable state in a package-level variable.** The original prototype had `var Users = []User{}` a global slice mutated across goroutines with zero locking. It was a real, live data race. It's also the exact pattern that makes horizontal scaling (Layer 11) impossible later. If you're tempted to write `var something = []Thing{}` at package scope, stop — that state belongs in Postgres or nowhere.
+3. **Every query is parameterized.** `$1, $2...` never string concatenation, never `fmt.Sprintf` into SQL, ever.
 4. **Secrets never enter source control.** Environment variables only. If you paste an API key into a file, you've already failed this rule even if you delete it before committing — rotate it.
 5. **Payment and session data is never cached.** Fare tables and dashboard aggregates can be. Balances, sessions, and trip state cannot.
 6. **Every external call (Moniepoint, VSP, NIMC) has a timeout.** No exceptions.
@@ -57,12 +57,12 @@ lib/
 
 **Adding a new feature — the checklist:**
 1. Create the feature folder under `features/`.
-2. Define the repository interface in `data/repositories/` *before* writing any UI — this mirrors the Go-side discipline of designing the interface first.
+2. Define the repository interface in `data/repositories/` *before* writing any UI this mirrors the Go-side discipline of designing the interface first.
 3. Wire a Riverpod provider for any state that outlives a single widget.
-4. Build the screen last, against the provider — never call the repository directly from a widget.
+4. Build the screen last, against the provider never call the repository directly from a widget.
 
 **✅ Do**
-- Cache route/destination lists client-side for the shift (per the Fare Engine section) — don't refetch before every tap.
+- Cache route/destination lists client-side for the shift (per the Fare Engine section) don't refetch before every tap.
 - Use `flutter_secure_storage` for anything touching the device-bound key or cached biometric template. Never `SharedPreferences`.
 
 **❌ Don't**
@@ -71,7 +71,7 @@ lib/
 
 ### React (Admin dashboard)
 
-**TypeScript, not JavaScript — mandatory, not a preference.** Interfaces should mirror the Go structs they represent, field for field:
+**TypeScript, not JavaScript mandatory, not a preference.** Interfaces should mirror the Go structs they represent, field for field:
 
 ```typescript
 // Go: type Session struct { ID string; DriverID string; ExpiresAt time.Time; Status string }
@@ -86,10 +86,10 @@ interface Session {
 If a Go struct changes, the corresponding TS interface changes in the same PR, not a follow-up one.
 
 **✅ Do**
-- Keep privileged actions (rebind, reconciliation, fare edits) behind explicit confirmation dialogs — these hit `UpdateFare`, `RebindTerminal`, etc. and are logged with an admin ID. Never fire them on a single click.
+- Keep privileged actions (rebind, reconciliation, fare edits) behind explicit confirmation dialogs these hit `UpdateFare`, `RebindTerminal`, etc. and are logged with an admin ID. Never fire them on a single click.
 
 **❌ Don't**
-- Don't fetch dashboard aggregate data (heatmap, corridor stats) on every render. Respect the caching layer (Layer 10) — these queries are expensive on purpose-designed short TTLs, not free.
+- Don't fetch dashboard aggregate data (heatmap, corridor stats) on every render. Respect the caching layer (Layer 10) these queries are expensive on purpose-designed short TTLs, not free.
 
 ---
 
@@ -104,7 +104,7 @@ internal/db/                # package db — connection setup, WithTx helper
 internal/repository/        # package repository — interfaces + Postgres implementations
 ```
 
-**The handler pattern — every handler follows this exact shape:**
+**The handler pattern every handler follows this exact shape:**
 
 ```go
 func (app *App) someHandler(c *gin.Context) {
@@ -130,7 +130,7 @@ func (app *App) someHandler(c *gin.Context) {
 **Rules:**
 - Input structs are defined *inline*, inside the handler, unless reused elsewhere. Don't create a top-level `SomeThingRequest` struct for a one-off.
 - Every handler takes `c.Request.Context()` through to the repository call — this is what makes a dropped client connection cancel the underlying query instead of running it to completion uselessly.
-- Error messages returned to the client are generic (`"could not do thing"`). Real error detail goes to structured logs (Layer 12), never to the response body — a verbose error message is a reconnaissance gift to anyone probing the API.
+- Error messages returned to the client are generic (`"could not do thing"`). Real error detail goes to structured logs (Layer 12), never to the response body a verbose error message is a reconnaissance gift to anyone probing the API.
 
 **Repository pattern — the actual DI seam:**
 
@@ -151,9 +151,9 @@ This is what lets the exact same repository code run standalone *or* inside a `d
 
 **❌ Don't**
 - Don't add a new package-level `var` for anything that isn't a genuine constant.
-- Don't call `vsp.VerifyFingerprint` or `moniepoint.Transfer` directly from a handler — always through the injected interface (`IdentityVerifier`, `PaymentProcessor`), so tests can substitute a fake.
+- Don't call `vsp.VerifyFingerprint` or `moniepoint.Transfer` directly from a handler always through the injected interface (`IdentityVerifier`, `PaymentProcessor`), so tests can substitute a fake.
 
-**The convention for any handler that overwrites a value someone might contest later:** this has now shown up independently in `UpdateFare`, `RebindTerminal`, and card batch reconciliation — that's not a coincidence, it's a real pattern. Any privileged write that changes a value (not just creates a new row) follows this shape, not a bare `UPDATE`:
+**The convention for any handler that overwrites a value someone might contest later:** this has now shown up independently in `UpdateFare`, `RebindTerminal`, and card batch reconciliation that's not a coincidence, it's a real pattern. Any privileged write that changes a value (not just creates a new row) follows this shape, not a bare `UPDATE`:
 
 ```go
 func UpdateSomething(id string, newValue T, adminID, reason string) error {
@@ -191,7 +191,7 @@ Old value captured, new value applied, both logged, atomically. If you're writin
 - Spatial queries use `ST_DWithin` with `::geography` casts for real-world distance, not raw `ST_Distance` on `geometry` — the latter gives you degrees, not meters, and it's a subtle bug that only shows up when someone eyeballs the numbers and they look wrong.
 
 **Naming trap to know about — `terminal` vs `terminal_location`:**
-These mean genuinely different things and the confusion is easy to reintroduce in code even after it's been fixed in the docs. `terminal` is a driver's physical device (`hardware_serial`, bound to one driver). `terminal_location` is a place — Tanke, Challenge. If you're naming a variable, a function parameter, or a column and you write bare `terminal` or `terminalID`, stop and ask which one you mean — then name it `deviceTerminalID` or `terminalLocationID` explicitly. This exact ambiguity already caused real confusion in the architecture doc's own roadmap section; don't let it happen again in code where it's harder to spot.
+These mean genuinely different things and the confusion is easy to reintroduce in code even after it's been fixed in the docs. `terminal` is a driver's physical device (`hardware_serial`, bound to one driver). `terminal_location` is a place Tanke, Challenge. If you're naming a variable, a function parameter, or a column and you write bare `terminal` or `terminalID`, stop and ask which one you mean — then name it `deviceTerminalID` or `terminalLocationID` explicitly. This exact ambiguity already caused real confusion in the architecture doc's own roadmap section; don't let it happen again in code where it's harder to spot.
 
 ---
 
@@ -199,14 +199,14 @@ These mean genuinely different things and the confusion is easy to reintroduce i
 
 *(Design here is now thorough — session middleware for the four customer logins, plus the full admin access model below — but almost none of it is in the real codebase yet, which still only has the stopgap terminal-key check from the `/tap` fix. Whoever picks this up next has a clear spec to build against, not a blank page.)*
 
-**Every protected route needs middleware, not an inline check.** Don't write `if session.Role != "driver" { ... }` inside a handler body — that pattern gets copy-pasted inconsistently as routes grow. Middleware, applied at route registration:
+**Every protected route needs middleware, not an inline check.** Don't write `if session.Role != "driver" { ... }` inside a handler body that pattern gets copy-pasted inconsistently as routes grow. Middleware, applied at route registration:
 
 ```go
 router.POST("/tap", RequireRole("driver"), app.tapHandler)
 router.POST("/admin/rebind", RequireRole("admin"), RequireAudit(), app.rebindHandler)
 ```
 
-**RBAC on the admin side is ops vs. super-admin** — don't collapse this into a single "is admin" boolean. Terminal rebind and card batch reconciliation need `super_admin`; read-only dashboard views need only `ops`. The field is `identity.admin_tier`, checked the same middleware way as any other role:
+**RBAC on the admin side is ops vs. super-admin** don't collapse this into a single "is admin" boolean. Terminal rebind and card batch reconciliation need `super_admin`; read-only dashboard views need only `ops`. The field is `identity.admin_tier`, checked the same middleware way as any other role:
 
 ```go
 router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), app.rebindHandler)
@@ -224,7 +224,7 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 ## 5. Hosting & Deployment
 
-**Dockerfile is multi-stage** — build stage compiles the Go binary, final stage is a minimal image with just the binary. Don't ship the Go toolchain in production images.
+**Dockerfile is multi-stage** build stage compiles the Go binary, final stage is a minimal image with just the binary. Don't ship the Go toolchain in production images.
 
 **Environment variables** are the only source of configuration — no config files with environment-specific values checked into git. Naming: `SCREAMING_SNAKE_CASE`, prefixed by concern where it helps clarity (`DATABASE_URL`, `MONIEPOINT_API_KEY`, `VSP_ENDPOINT`).
 
@@ -282,7 +282,7 @@ Per-terminal limits for driver-facing endpoints, per-IP for public ones. If you'
 
 ## 10. Caching & CDN
 
-**The only things that get cached**: dashboard aggregate queries (heatmap, corridor stats, revenue tickers) — short TTL, 30–60 seconds. Route/stop lists client-side per shift.
+**The only things that get cached**: dashboard aggregate queries (heatmap, corridor stats, revenue tickers) short TTL, 30–60 seconds. Route/stop lists client-side per shift.
 
 **Never cached, ever**: session state, account balances, fare calculations for an in-progress trip, anything from `AuthorizeTrip`.
 
@@ -292,7 +292,7 @@ If you're not sure whether something is safe to cache, the answer is no until so
 
 ## 11. Load Balancing & Scaling
 
-**Every handler must be stateless** — nothing about a request's outcome should depend on which specific server instance handled it. This is Golden Rule #2 from Section 0, restated here because it's the direct reason horizontal scaling works at all.
+**Every handler must be stateless** nothing about a request's outcome should depend on which specific server instance handled it. This is Golden Rule #2 from Section 0, restated here because it's the direct reason horizontal scaling works at all.
 
 **`/ws/map` is the one genuine exception to think about**: once there's more than one API instance, WebSocket connections need a shared pub/sub (Redis) to fan out position updates across instances — a client connected to instance A needs to see updates that originated on instance B. Don't build this before it's needed (single instance is fine through T3), but don't accidentally paint yourself into an architecture where it's hard to add either.
 
@@ -300,7 +300,7 @@ If you're not sure whether something is safe to cache, the answer is no until so
 
 ## 12. Error Tracking & Logs
 
-**Structured logging, always** — `log/slog`, key-value fields, never a bare formatted string you'll have to regex later.
+**Structured logging, always** `log/slog`, key-value fields, never a bare formatted string you'll have to regex later.
 
 ```go
 slog.Error("trip authorization failed", "terminal_id", terminalID, "error", err)
@@ -315,7 +315,7 @@ slog.Error("trip authorization failed", "terminal_id", terminalID, "error", err)
 
 ## 13. Availability & Recovery
 
-**Every external call gets a timeout** — Moniepoint, VSP, NIMC, anything crossing a network boundary you don't control:
+**Every external call gets a timeout** Moniepoint, VSP, NIMC, anything crossing a network boundary you don't control:
 
 ```go
 ctx, cancel := context.WithTimeout(parentCtx, 5*time.Second)
@@ -338,7 +338,7 @@ router.GET("/health", func(c *gin.Context) {
 
 **Backups are verified, not just scheduled.** A cron job that's been silently failing for two months isn't a backup — if you're touching backup infrastructure, confirm a restore actually works, don't just confirm the job runs.
 
-**Manual payout retries reuse the original idempotency key — never a fresh transfer.** If ops needs to resend a payout because a driver says they didn't receive it, that action calls `moniepoint.Transfer` with the *original trip's nonce* as the idempotency key, exactly like the automated path. A fresh ad-hoc transfer with no idempotency key is how a driver ends up paid twice for one trip — this is a real operational failure mode, not a hypothetical one, and it happens through good intentions ("let me just fix this for them quickly"), not carelessness.
+**Manual payout retries reuse the original idempotency key never a fresh transfer.** If ops needs to resend a payout because a driver says they didn't receive it, that action calls `moniepoint.Transfer` with the *original trip's nonce* as the idempotency key, exactly like the automated path. A fresh ad-hoc transfer with no idempotency key is how a driver ends up paid twice for one trip this is a real operational failure mode, not a hypothetical one, and it happens through good intentions ("let me just fix this for them quickly"), not carelessness.
 
 ---
 
@@ -355,7 +355,7 @@ router.GET("/health", func(c *gin.Context) {
 
 ## Appendix B: New Developer Onboarding
 
-1. Read the master architecture doc (`ASM guide.html`) — the schema, the pseudocode flows, the security fixes and *why* they exist.
+1. Read the master architecture doc (`ASM guide.html`) the schema, the pseudocode flows, the security fixes and *why* they exist.
 2. Read this guide, Section 0 twice.
 3. Set up dev environment against **staging**, never production, and confirm `DATABASE_URL` points where you think it does before running anything.
-4. Your first PR should be small and touch exactly one layer — this is a better way to learn the conventions than reading about them.
+4. Your first PR should be small and touch exactly one layer this is a better way to learn the conventions than reading about them.
