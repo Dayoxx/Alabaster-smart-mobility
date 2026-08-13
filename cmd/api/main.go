@@ -145,98 +145,240 @@ func (app *App) tapHandler(c *gin.Context) {
 		Lat         float64 `json:"lat"`
 		Lng         float64 `json:"lng"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 
-	terminal, err := app.Terminals.FindByID(c.Request.Context(), input.TerminalID)
+	passengerID, err := uuid.Parse(input.PassengerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not look up terminal"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid passenger_id",
+		})
 		return
 	}
+
+	terminalID, err := uuid.Parse(input.TerminalID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid terminal_id",
+		})
+		return
+	}
+
+	terminal, err := app.Terminals.FindByID(
+		c.Request.Context(),
+		terminalID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not look up terminal",
+		})
+		return
+	}
+
 	if terminal == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "terminal not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "terminal not found",
+		})
 		return
 	}
 
-	accounts, err := app.Accounts.FindActiveByPassenger(c.Request.Context(), input.PassengerID)
+	accounts, err := app.Accounts.FindActiveByPassenger(
+		c.Request.Context(),
+		passengerID,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not look up passenger accounts"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not look up passenger accounts",
+		})
 		return
 	}
+
 	if len(accounts) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "passenger has no linked accounts"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "passenger has no linked accounts",
+		})
 		return
 	}
+
 	usedAccount := accounts[0]
 
 	platformFee := input.Amount * 0.05
 	driverPayout := input.Amount - platformFee
 
+	lat := input.Lat
+	lng := input.Lng
+
 	newTrip := models.Trip{
-		ID: uuid.New(), PassengerID: input.PassengerID, DriverID: terminal.DriverID,
-		TerminalID: input.TerminalID, FareAmount: input.Amount, DriverPayout: driverPayout,
-		PlatformFee: platformFee, PickupLat: input.Lat, PickupLng: input.Lng,
-		Status: "success", TappedAt: time.Now(),
+		ID:           uuid.New(),
+		PassengerID:  passengerID,
+		DriverID:     terminal.DriverID,
+		TerminalID:   terminalID,
+		FareAmount:   input.Amount,
+		DriverPayout: driverPayout,
+		PlatformFee:  platformFee,
+		PickupLat:    &lat,
+		PickupLng:    &lng,
+		Status:       "success",
+		TappedAt:     time.Now(),
 	}
-	saved, err := app.Trips.Create(c.Request.Context(), newTrip)
+
+	saved, err := app.Trips.Create(
+		c.Request.Context(),
+		newTrip,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save trip"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not save trip",
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"trip": saved, "paid_from": usedAccount.BankName, "driver_payout": driverPayout})
+	c.JSON(http.StatusCreated, gin.H{
+		"trip":          saved,
+		"paid_from":     usedAccount.BankName,
+		"driver_payout": driverPayout,
+	})
 }
 
 func (app *App) tripsHandler(c *gin.Context) {
-	trips, err := app.Trips.FindByPassengerOrDriver(c.Request.Context(), c.Query("passenger_id"), c.Query("driver_id"))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch trips"})
+	passengerIDStr := c.Query("passenger_id")
+	driverIDStr := c.Query("driver_id")
+
+	if passengerIDStr == "" && driverIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "passenger_id or driver_id is required",
+		})
 		return
 	}
+
+	if passengerIDStr != "" {
+		passengerID, err := uuid.Parse(passengerIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid passenger_id",
+			})
+			return
+		}
+
+		trips, err := app.Trips.FindByPassenger(
+			c.Request.Context(),
+			passengerID,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "could not fetch passenger trips",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, trips)
+		return
+	}
+
+	driverID, err := uuid.Parse(driverIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid driver_id",
+		})
+		return
+	}
+
+	trips, err := app.Trips.FindByDriver(
+		c.Request.Context(),
+		driverID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not fetch driver trips",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, trips)
 }
 
 func (app *App) terminalHandler(c *gin.Context) {
 	var input struct {
-		DriverID     string  `json:"driver_id" binding:"required"`
-		DeviceSerial string  `json:"device_serial" binding:"required"`
-		VehiclePlate string  `json:"vehicle_plate" binding:"required"`
-		TerminalType string  `json:"terminal_type" binding:"required"`
-		LastLat      float64 `json:"last_lat"`
-		LastLng      float64 `json:"last_lng"`
+		DriverID     string   `json:"driver_id" binding:"required"`
+		DeviceSerial string   `json:"device_serial" binding:"required"`
+		VehiclePlate string   `json:"vehicle_plate" binding:"required"`
+		TerminalType string   `json:"terminal_type" binding:"required"`
+		LastLat      *float64 `json:"last_lat"`
+		LastLng      *float64 `json:"last_lng"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	validTypes := map[string]bool{"keke": true, "bus": true}
-	if !validTypes[input.TerminalType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "terminal_type must be keke or bus"})
+	driverID, err := uuid.Parse(input.DriverID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid driver_id",
+		})
 		return
 	}
 
-	existing, err := app.Terminals.FindByDeviceSerial(c.Request.Context(), input.DeviceSerial)
+	validTypes := map[string]bool{
+		"keke": true,
+		"bus":  true,
+	}
+
+	if !validTypes[input.TerminalType] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "terminal_type must be keke or bus",
+		})
+		return
+	}
+
+	existing, err := app.Terminals.FindByDeviceSerial(
+		c.Request.Context(),
+		input.DeviceSerial,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check existing terminals"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not check existing terminals",
+		})
 		return
 	}
+
 	if existing != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "device_serial already registered"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "device_serial already registered",
+		})
 		return
 	}
+
+	lastSeenAt := time.Now()
 
 	newTerminal := models.Terminal{
-		ID: uuid.New(), DriverID: input.DriverID, DeviceSerial: input.DeviceSerial,
-		VehiclePlate: input.VehiclePlate, TerminalType: input.TerminalType,
-		LastLat: input.LastLat, LastLng: input.LastLng, LastSeenAt: time.Now(), IsActive: true,
+		ID:           uuid.New(),
+		DriverID:     driverID,
+		DeviceSerial: input.DeviceSerial,
+		VehiclePlate: input.VehiclePlate,
+		TerminalType: input.TerminalType,
+		LastLat:      input.LastLat,
+		LastLng:      input.LastLng,
+		LastSeenAt:   &lastSeenAt,
+		IsActive:     true,
 	}
-	saved, err := app.Terminals.Create(c.Request.Context(), newTerminal)
+
+	saved, err := app.Terminals.Create(
+		c.Request.Context(),
+		newTerminal,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create terminal"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "could not create terminal",
+		})
 		return
 	}
+
 	c.JSON(http.StatusCreated, saved)
 }

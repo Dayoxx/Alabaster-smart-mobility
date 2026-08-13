@@ -26,5 +26,6 @@ type TerminalRepository interface {
 
 type TripRepository interface {
 	Create(ctx context.Context, t models.Trip) (models.Trip, error)
-	FindByPassengerOrDriver(ctx context.Context, passengerID, driverID uuid.UUID) ([]models.Trip, error)
+	FindByPassenger(ctx context.Context, passengerID uuid.UUID) ([]models.Trip, error)
+	FindByDriver(ctx context.Context, driverID uuid.UUID) ([]models.Trip, error)
 }

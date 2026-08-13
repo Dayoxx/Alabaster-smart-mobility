@@ -130,22 +130,86 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trp models.Trip) (m
 	return trp, err
 }
 
-func (r *PostgresTripRepository) FindByPassengerOrDriver(ctx context.Context, passengerID, driverID uuid.UUID) ([]models.Trip, error) {
+func (r *PostgresTripRepository) FindByPassenger(ctx context.Context, passengerID uuid.UUID) ([]models.Trip, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, passenger_id, driver_id, terminal_id, fare_amount, driver_payout, platform_fee, pickup_lat, pickup_lng, status, tapped_at
-		 FROM trips WHERE ($1 <> '' AND passenger_id = $1) OR ($2 <> '' AND driver_id = $2)`, passengerID, driverID)
+		`SELECT id, passenger_id, driver_id, terminal_id,
+		        fare_amount, driver_payout, platform_fee,
+		        pickup_lat, pickup_lng, status, tapped_at
+		 FROM trips
+		 WHERE passenger_id = $1
+		 ORDER BY tapped_at DESC`,
+		passengerID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var trips []models.Trip
+
 	for rows.Next() {
 		var trp models.Trip
-		if err := rows.Scan(&trp.ID, &trp.PassengerID, &trp.DriverID, &trp.TerminalID, &trp.FareAmount, &trp.DriverPayout, &trp.PlatformFee, &trp.PickupLat, &trp.PickupLng, &trp.Status, &trp.TappedAt); err != nil {
+
+		if err := rows.Scan(
+			&trp.ID,
+			&trp.PassengerID,
+			&trp.DriverID,
+			&trp.TerminalID,
+			&trp.FareAmount,
+			&trp.DriverPayout,
+			&trp.PlatformFee,
+			&trp.PickupLat,
+			&trp.PickupLng,
+			&trp.Status,
+			&trp.TappedAt,
+		); err != nil {
 			return nil, err
 		}
+
 		trips = append(trips, trp)
 	}
+
+	return trips, rows.Err()
+}
+
+func (r *PostgresTripRepository) FindByDriver(ctx context.Context, driverID uuid.UUID) ([]models.Trip, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, passenger_id, driver_id, terminal_id,
+		        fare_amount, driver_payout, platform_fee,
+		        pickup_lat, pickup_lng, status, tapped_at
+		 FROM trips
+		 WHERE driver_id = $1
+		 ORDER BY tapped_at DESC`,
+		driverID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trips []models.Trip
+
+	for rows.Next() {
+		var trp models.Trip
+
+		if err := rows.Scan(
+			&trp.ID,
+			&trp.PassengerID,
+			&trp.DriverID,
+			&trp.TerminalID,
+			&trp.FareAmount,
+			&trp.DriverPayout,
+			&trp.PlatformFee,
+			&trp.PickupLat,
+			&trp.PickupLng,
+			&trp.Status,
+			&trp.TappedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		trips = append(trips, trp)
+	}
+
 	return trips, rows.Err()
 }
