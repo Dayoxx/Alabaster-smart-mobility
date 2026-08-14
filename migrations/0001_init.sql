@@ -23,15 +23,16 @@ CREATE TABLE IF NOT EXISTS passenger_accounts (
 CREATE INDEX IF NOT EXISTS idx_passenger_accounts_passenger_id ON passenger_accounts(passenger_id);
 
 CREATE TABLE IF NOT EXISTS terminals (
-    id              UUID PRIMARY KEY,
-    driver_id       UUID NOT NULL REFERENCES users(id),
-    device_serial   VARCHAR(64) UNIQUE NOT NULL,
-    vehicle_plate   VARCHAR(20) NOT NULL,
-    terminal_type   VARCHAR(20) NOT NULL, -- 'keke' | 'bus'
-    last_lat        DOUBLE PRECISION,
-    last_lng        DOUBLE PRECISION,
-    last_seen_at    TIMESTAMPTZ,
-    is_active       BOOLEAN NOT NULL DEFAULT true
+    id            UUID PRIMARY KEY,
+    driver_id     UUID NOT NULL REFERENCES users(id),
+    device_serial VARCHAR(64) UNIQUE NOT NULL,
+    vehicle_plate VARCHAR(20) NOT NULL,
+    terminal_type VARCHAR(20) NOT NULL,
+    vehicle_type  VARCHAR(20) NOT NULL DEFAULT 'keke',
+    last_lat      DOUBLE PRECISION,
+    last_lng      DOUBLE PRECISION,
+    last_seen_at  TIMESTAMPTZ,
+    is_active     BOOLEAN NOT NULL DEFAULT true
 );
 
 CREATE TABLE IF NOT EXISTS trips (

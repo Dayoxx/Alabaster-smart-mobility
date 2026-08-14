@@ -245,6 +245,7 @@ func (app *App) tapHandler(c *gin.Context) {
 	})
 }
 
+// Trips
 func (app *App) tripsHandler(c *gin.Context) {
 	passengerIDStr := c.Query("passenger_id")
 	driverIDStr := c.Query("driver_id")
@@ -302,12 +303,14 @@ func (app *App) tripsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, trips)
 }
 
+// TerminalHandler
 func (app *App) terminalHandler(c *gin.Context) {
 	var input struct {
 		DriverID     string   `json:"driver_id" binding:"required"`
 		DeviceSerial string   `json:"device_serial" binding:"required"`
 		VehiclePlate string   `json:"vehicle_plate" binding:"required"`
 		TerminalType string   `json:"terminal_type" binding:"required"`
+		VehicleType  string   `json:"vehicle_type" binding:"required"`
 		LastLat      *float64 `json:"last_lat"`
 		LastLng      *float64 `json:"last_lng"`
 	}
@@ -325,15 +328,31 @@ func (app *App) terminalHandler(c *gin.Context) {
 		return
 	}
 
-	validTypes := map[string]bool{
+	validTerminalTypes := map[string]bool{
+		"nfc_reader": true,
+	}
+
+	if !validTerminalTypes[input.TerminalType] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "terminal_type must be nfc_reader",
+		})
+		return
+	}
+
+	validVehicleTypes := map[string]bool{
 		"keke": true,
 		"bus":  true,
+
+		// Future driver-controlled vehicle types:
+		// "taxi": true,
+
+		// Future company/operator-controlled transport:
 		// "train": true,
 	}
 
-	if !validTypes[input.TerminalType] {
+	if !validVehicleTypes[input.VehicleType] {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "terminal_type must be keke or bus",
+			"error": "vehicle_type must be keke or bus",
 		})
 		return
 	}
@@ -364,6 +383,7 @@ func (app *App) terminalHandler(c *gin.Context) {
 		DeviceSerial: input.DeviceSerial,
 		VehiclePlate: input.VehiclePlate,
 		TerminalType: input.TerminalType,
+		VehicleType:  input.VehicleType,
 		LastLat:      input.LastLat,
 		LastLng:      input.LastLng,
 		LastSeenAt:   &lastSeenAt,

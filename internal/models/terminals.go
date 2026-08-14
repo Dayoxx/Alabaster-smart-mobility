@@ -12,6 +12,7 @@ type Terminal struct {
 	DeviceSerial string     `json:"device_serial"`
 	VehiclePlate string     `json:"vehicle_plate"`
 	TerminalType string     `json:"terminal_type"`
+	VehicleType  string     `json:"vehicle_type"`
 	LastLat      *float64   `json:"last_lat"`
 	LastLng      *float64   `json:"last_lng"`
 	LastSeenAt   *time.Time `json:"last_seen_at"`
