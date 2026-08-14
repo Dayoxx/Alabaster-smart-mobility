@@ -1,6 +1,6 @@
-# Transportation Model
+# Alabaster Smart Mobility
 
-Transportation Model is a transportation infrastructure platform being built
+A transportation infrastructure platform being built
 to support digital transportation services, payments, and trip management.
 
 The project is being developed incrementally with a Go backend and PostgreSQL
@@ -10,7 +10,7 @@ as its persistent data store.
 
 ## Overview
 
-Transportation Model connects the core components involved in a
+ASM connects the core components involved in a
 transportation transaction:
 
 ```text
