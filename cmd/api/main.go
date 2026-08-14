@@ -44,7 +44,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
 
-	srv := &http.Server{
+	svr := &http.Server{
 		Addr:              ":8080",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -54,8 +54,8 @@ func main() {
 		MaxHeaderBytes:    1 << 16,
 	}
 
-	log.Printf("listening on %s", srv.Addr)
-	log.Fatal(srv.ListenAndServe())
+	log.Printf("listening on %s", svr.Addr)
+	log.Fatal(svr.ListenAndServe())
 }
 
 // Registerhandler
@@ -66,7 +66,7 @@ func (app *App) registerHandler(c *gin.Context) {
 		Role     string `json:"role" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error check your regihand logic": err.Error()})
 		return
 	}
 
@@ -91,7 +91,7 @@ func (app *App) linkAccountHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error check your linkacc logic": err.Error()})
 		return
 	}
 
@@ -107,7 +107,7 @@ func (app *App) linkAccountHandler(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "could not check existing accounts",
+			"error": "could not check existing accounts internal error detected",
 		})
 		return
 	}
@@ -128,7 +128,7 @@ func (app *App) linkAccountHandler(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "could not link account",
+			"error": "could not link account internal error detected",
 		})
 		return
 	}
@@ -328,6 +328,7 @@ func (app *App) terminalHandler(c *gin.Context) {
 	validTypes := map[string]bool{
 		"keke": true,
 		"bus":  true,
+		// "train": true,
 	}
 
 	if !validTypes[input.TerminalType] {
