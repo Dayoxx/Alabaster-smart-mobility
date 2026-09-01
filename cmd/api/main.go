@@ -187,6 +187,13 @@ func (app *App) tapHandler(c *gin.Context) {
 		return
 	}
 
+	if !terminal.IsActive {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "terminal is inactive",
+		})
+		return
+	}
+
 	accounts, err := app.Accounts.FindActiveByPassenger(
 		c.Request.Context(),
 		passengerID,

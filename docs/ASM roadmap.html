@@ -241,6 +241,7 @@
   <a href="#revenue">Revenue</a>
   <a href="#fix">Session Fix</a>
   <a href="#binding">Device Binding</a>
+  <a href="#card-lifecycle">Card Lifecycle</a>
   <a href="#schema">Data Model</a>
   <a href="#fare-engine">Fare Engine</a>
   <a href="#payment">Payment Flow</a>
@@ -288,7 +289,7 @@
       <div class="mode-card">
         <div class="mode-label">Passenger login</div>
         <div class="mode-title">Ride + pay</div>
-        <ul class="mode-items"><li>Hosts the HCE service — this is the passenger app the phone-tap section flagged as missing</li><li>Linked accounts, trip history, card status</li></ul>
+        <ul class="mode-items"><li>Hosts the HCE service — this is the passenger app the phone-tap section flagged as missing</li><li>Linked accounts, trip history, card status</li><li>Passenger-controlled card activation/deactivation; immediate lost/stolen blocking and replacement status</li></ul>
       </div>
       <div class="mode-card">
         <div class="mode-label">Student login</div>
@@ -397,7 +398,7 @@
     <p style="font-size:12.5px;color:var(--text-faint);">Naming fix: <code class="inline">terminal</code> is a driver's physical device (hardware_serial, bound to one driver). <code class="inline">terminal_location</code> is a place — Tanke, Challenge. <code class="inline">trip.entry/exit_terminal_id</code> used to blur these; now corrected to reference the place, since fares are about routes between places, not which device facilitated the tap.</p>
     <div class="schema">
       <div class="entity"><h4>identity</h4><ul><li>id (pk)</li><li>nin_ref <span class="fk">// NIMC/VSP token</span></li><li>biometric_template_hash <span class="fk">// device-bound</span></li><li>linked_account_ref <span class="fk">// Moniepoint</span></li><li>role: passenger | driver | operator | agent | student</li><li>admin_tier: ops | super_admin <span class="fk">// role=operator only</span></li><li>institution_id <span class="fk">→ institution, nullable — student only, TBD what it gates</span></li><li>last_verified_at</li></ul></div>
-      <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>type: card | <span class="fk">phone_hce</span></li><li>card_uid <span class="fk">// type=card only</span></li><li>device_public_key <span class="fk">// type=phone_hce only</span></li><li>status: active | void | reissued</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li></ul></div>
+      <div class="entity"><h4>credential</h4><ul><li>id (pk)</li><li>identity_id <span class="fk">→ identity</span></li><li>type: card | <span class="fk">phone_hce</span></li><li>card_uid <span class="fk">// type=card only</span></li><li>device_public_key <span class="fk">// type=phone_hce only</span></li><li>status: active | inactive | blocked | void</li><li>issued_by_agent_id <span class="fk">→ identity (agent)</span></li><li>issued_at</li><li>blocked_at, blocked_reason <span class="fk">// lost | stolen | compromised</span></li><li>previous_credential_id <span class="fk">→ credential, nullable</span></li></ul></div>
       <div class="entity new-entity"><h4>card_batch <span class="fk">(agent accounting)</span></h4><ul><li>id (pk)</li><li>agent_id <span class="fk">→ identity (agent)</span></li><li>quantity_allocated</li><li>quantity_returned</li><li>quantity_damaged</li><li>status: open | reconciled | discrepancy</li><li>allocated_at, reconciled_at, reconciled_by_admin_id</li></ul></div>
       <div class="entity new-entity"><h4>session <span class="fk">(fix 1)</span></h4><ul><li>id (pk)</li><li>driver_identity_id <span class="fk">→ identity</span></li><li>terminal_id <span class="fk">→ terminal</span></li><li>route_id <span class="fk">→ route // driver's choice for THIS shift, not fixed</span></li><li>token, started_at, expires_at</li><li>verify_method: local_match | live_reverify</li><li>status: active | expired | flagged</li></ul></div>
       <div class="entity new-entity"><h4>terminal <span class="fk">(fix 2)</span></h4><ul><li>id (pk), zone</li><li>hardware_serial <span class="fk">// physical device key</span></li><li>bound_driver_identity_id <span class="fk">→ identity</span></li><li>bound_at, bound_by_admin_id</li><li><em>no payout config stored here</em></li></ul></div>
@@ -419,9 +420,47 @@
 <span class="c-key">CREATE EXTENSION</span> postgis_topology;</code></pre>
   </section>
 
+  <section id="card-lifecycle">
+    <div class="section-label">Passenger security control</div>
+    <h2>Physical card lifecycle</h2>
+    <p>The company-issued NFC card is a <strong>payment credential</strong>, not a bank account and not a wallet. It authorizes the passenger's transport payment against one of their linked bank accounts. Passenger-controlled card state therefore sits independently from both identity state and linked-account state.</p>
+
+    <div class="fix-box"><span class="tag">Core distinction</span><p><strong>Card activation controls the credential.</strong> It does not activate, deactivate, freeze, or modify any linked bank account. The passenger may have up to three linked accounts while possessing one current physical transport card.</p></div>
+
+    <h3>State model</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div><div class="flow-body"><div class="flow-title">ACTIVE → INACTIVE</div><p class="flow-desc">Passenger turns the transport card off in the app. Future taps are rejected; linked bank accounts remain unchanged.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div><div class="flow-body"><div class="flow-title">INACTIVE → ACTIVE</div><p class="flow-desc">Passenger turns the current card back on. No new card is issued and no bank-account changes occur.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot red"></div><div class="flow-connector"></div></div><div class="flow-body"><div class="flow-title">ACTIVE / INACTIVE → BLOCKED</div><p class="flow-desc">Passenger reports the card lost, stolen, or compromised. Blocking is immediate and prevents authorization. A blocked card cannot simply be switched back on.</p></div></div>
+      <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div><div class="flow-body"><div class="flow-title">BLOCKED → VOID + NEW CARD ACTIVE</div><p class="flow-desc">After identity verification at an authorized replacement point, the old credential is permanently retired and a new credential is issued to the same passenger identity.</p></div></div>
+    </div>
+
+    <h3>Passenger controls</h3>
+    <div class="endpoint-list">
+      <div class="endpoint"><span class="endpoint-method get">GET</span><div><div class="endpoint-path">/cards/:id</div><p class="endpoint-desc">Return the authenticated passenger's current card status and replacement status without exposing the card UID.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method post">POST</span><div><div class="endpoint-path">/cards/:id/activate</div><p class="endpoint-desc">Reactivate an inactive current card. Reject if blocked or void.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method post">POST</span><div><div class="endpoint-path">/cards/:id/deactivate</div><p class="endpoint-desc">Temporarily turn off the current card. Idempotent if already inactive.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method post">POST</span><div><div class="endpoint-path">/cards/:id/block</div><p class="endpoint-desc">Immediately block a lost, stolen, or compromised card. Record reason and timestamp.</p></div></div>
+      <div class="endpoint"><span class="endpoint-method post">POST</span><div><div class="endpoint-path">/cards/:id/reissue</div><p class="endpoint-desc">Start or complete replacement through an authorized agent/operations flow after identity verification; never silently create a second active card.</p></div></div>
+    </div>
+
+    <h3>Lost or stolen card recovery</h3>
+    <ol>
+      <li>Passenger opens the app and chooses <strong>Block card</strong>.</li>
+      <li>Backend authenticates the passenger and verifies the card belongs to that identity.</li>
+      <li>Backend changes the card to <code class="inline">blocked</code> immediately and records the reason and event.</li>
+      <li>Passenger can continue using their linked bank accounts only through a valid transport credential; the blocked card itself cannot authorize payment.</li>
+      <li>For a physical replacement, an authorized agent performs fresh identity verification before issuing a new card.</li>
+      <li>The old credential is moved to <code class="inline">void</code>, the new UID is bound to the same passenger identity, and the issuance/replacement event links the two credentials.</li>
+    </ol>
+
+    <div class="callout"><span class="tag">Security invariant</span><p>At most one physical card credential is <strong>active</strong> for a passenger under the normal replacement model. Old credentials are retained for audit history but can never authorize another trip.</p></div>
+  </section>
+
   <section id="fare-engine">
     <div class="section-label">Determined before the tap, not after</div>
     <h2>Fare engine</h2>
+    <p>The payment architecture also records a <code class="inline">driver_daily_ticket</code> financial event keyed by driver and operating date. This keeps the daily levy auditable and separate from trip records.</p>
     <p>The driver selects the destination, the fare shows, <em>then</em> the passenger taps — matching how this already works verbally ("I'm going to Terminal F"). Three things feed one lookup: a fixed fare for named terminal-to-terminal trips, a stop-count tier for intermediate stops along whichever route the driver is running that day, and a distance-band estimate for the rare case that's neither.</p>
 
     <div class="fix-box">
@@ -512,7 +551,7 @@
       <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
         <div class="flow-body"><div class="flow-title">1 — Tap</div><p class="flow-desc">Flutter captures NFC card + signs a nonce, sends to Go over HTTPS with pickup coordinates.</p></div></div>
       <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
-        <div class="flow-body"><div class="flow-title">2 — Identify &amp; validate session</div><p class="flow-desc">Go looks up the credential, checks the terminal's active session and expiry.</p></div></div>
+        <div class="flow-body"><div class="flow-title">2 — Identify &amp; validate credential + session</div><p class="flow-desc">Go resolves the card credential, rejects inactive/blocked/void cards, then checks the terminal's active session and expiry.</p></div></div>
       <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
         <div class="flow-body"><div class="flow-title">3 — Fallback chain</div><p class="flow-desc">Passenger's linked accounts tried in priority order until one has sufficient balance.</p></div></div>
       <div class="flow-step"><div class="flow-line"><div class="flow-dot"></div><div class="flow-connector"></div></div>
@@ -529,6 +568,28 @@
       <div class="fallback-row"><span class="fallback-priority">3</span><span class="fallback-bank">PalmPay</span><span class="fallback-balance">not reached</span><span class="fallback-status unused">—</span></div>
     </div>
     <p style="font-size:12.5px;margin-top:10px;">Driver sees <strong style="color:var(--green);">"Payment successful"</strong> · Passenger sees <strong>"Paid from OPay · GTBank had insufficient funds"</strong></p>
+  </section>
+
+  <section id="driver-ticket">
+    <div class="section-label">Driver operating levy</div>
+    <h2>Daily ticket</h2>
+    <p>Driver-controlled vehicles are subject to a daily operating levy called the <strong>ticket</strong>. The ticket is deducted from the driver's linked receiving bank account and paid to the driver's union bank account. It is not a wallet balance, and it is not deducted simply because a driver exists in the system.</p>
+    <div class="callout"><span class="tag">First payment of the day</span><p>The first successful fare payment received through the driver's terminal establishes that the driver has started operating for that day. That event triggers the daily ticket check and, if unpaid, the ticket deduction. Subsequent fares that day do not trigger another ticket.</p></div>
+    <h3>Operating-day rule</h3>
+    <ul>
+      <li><strong>Trigger:</strong> first successful fare transaction for the driver on the platform operating date.</li>
+      <li><strong>Source:</strong> the driver's linked receiving bank account.</li>
+      <li><strong>Destination:</strong> the driver's union bank account resolved server-side.</li>
+      <li><strong>Once per day:</strong> a database uniqueness rule prevents duplicate ticket charges for the same driver and operating date.</li>
+      <li><strong>Visibility:</strong> the driver can see the ticket alongside normal daily fare transactions in their transaction history.</li>
+      <li><strong>Failure handling:</strong> ticket payment must have an explicit result; provider uncertainty must not cause a second debit, and a failed or uncertain ticket must not be silently marked paid.</li>
+    </ul>
+    <h3>Settlement relationship</h3>
+    <p>The ticket is a separate financial event from the passenger fare. The passenger still pays the fare to the driver through the existing payment flow, while the daily ticket is a driver-side levy routed to the union. The backend resolves both destinations and never accepts either account from the tap request.</p>
+    <div class="fix-box">
+      <span class="tag">Production invariant</span>
+      <p>Two concurrent first taps must never produce two daily tickets. The ticket record should be created or claimed atomically using <code class="inline">driver_id + operating_date</code> as the uniqueness boundary, with provider idempotency protecting the external debit.</p>
+    </div>
   </section>
 
   <section id="hce">
@@ -683,7 +744,7 @@
     <span class="c-key">if</span> <span class="c-fn">db.NonceSeen</span>(nonce) { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"replay detected"</span>) } <span class="c-com">// catches: identical request resent</span>
 
     credential := <span class="c-fn">db.FindCredentialByCard</span>(cardUID)
-    <span class="c-key">if</span> credential.Status != <span class="c-str">"active"</span> { <span class="c-key">return</span> <span class="c-fn">Fallback</span>(terminalID) }
+    <span class="c-key">if</span> credential.Status != <span class="c-str">"active"</span> { <span class="c-key">return</span> nil, <span class="c-fn">errors.New</span>(<span class="c-str">"card is not active"</span>) }
 
     <span class="c-com">// catches: a genuinely different tap, same passenger+terminal, seconds apart —</span>
     <span class="c-com">// short window on purpose, never blocks a real second trip minutes later</span>
@@ -1016,6 +1077,7 @@
     │   │                       <span class="c-com">// no taxi/ — that's T4 partner API, not this app</span>
     │   │
     │   ├── passenger_home/
+    │   │   ├── card/          <span class="c-com">// status, activate, deactivate, block, replacement</span>
     │   │   ├── hce/             <span class="c-com">// hosts the HCE service — see Phone Tap (HCE) section</span>
     │   │   ├── linked_accounts/
     │   │   └── trip_history/
@@ -1079,6 +1141,7 @@
         <div class="stop-body">
           <ul>
             <li>Passenger enrollment via VSP + Moniepoint account link.</li>
+            <li>Passenger card controls live: status, activate, deactivate, and immediate lost/stolen block; replacement flow available through authorized agent operations.</li>
             <li><code style="font-family:var(--font-mono);color:var(--teal);">auth/</code> live with two logins: Driver and Passenger — Student and mobile Admin follow once this base is proven.</li>
             <li>First Flutter build — NFC tap, fingerprint capture, session start screen, all under <code style="font-family:var(--font-mono);color:var(--teal);">driver_home/</code>.</li>
             <li><code style="font-family:var(--font-mono);color:var(--teal);">driver_home/bank_details</code> live — drivers self-link their payout account (<code style="font-family:var(--font-mono);color:var(--teal);">LinkDriverAccount</code>), closing the gap where nothing previously set one.</li>
@@ -1396,6 +1459,9 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
         ["t1-backups","Automated nightly Postgres backup running"],
         ["t1-uptime","Free uptime monitor pinging /health"],
         ["t1-alerting","Error tracking wired up (Sentry or similar) — pulled forward from T3, cheap enough not to wait"],
+        ["t1-card-state","Passenger card state machine enforced: active / inactive / blocked / void"],
+        ["t1-card-controls","Passenger can activate, deactivate and immediately block their current card"],
+        ["t1-card-reissue","Lost/stolen replacement flow verifies identity, voids old credential and activates new credential"],
       ]},
       { phase: "T2", name: "Terminal network + dashboard", items: [
         ["t2-adminauth","Admin auth stronger than driver session auth"],
@@ -1579,7 +1645,7 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
 
     <div class="sec-phase">      <div class="sec-phase-head"><span class="sec-phase-code">GAP</span><span class="sec-phase-name">Financial reconciliation &amp; reporting</span></div>
       <ul class="checklist">
-        <li>Daily settlement reports</li>
+        <li>Daily settlement reports, including driver ticket/levy reconciliation</li>
         <li>Driver payout statements a driver can actually read</li>
         <li>Tax/reporting obligations on platform fee income identified and tracked</li>
       </ul>
@@ -1590,6 +1656,7 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
       <ul class="checklist">
         <li>Process for a broken terminal mid-shift — driver's actual next step</li>
         <li>Escalation path beyond the agent — who a passenger reaches for a dispute the agent can't resolve</li>
+        <li>Card replacement SLA and notification policy defined for blocked/lost/stolen cards</li>
       </ul>
     </div>
   </section>
