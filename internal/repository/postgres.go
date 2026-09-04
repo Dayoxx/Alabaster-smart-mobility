@@ -130,9 +130,39 @@ func NewPostgresTripRepository(db *sql.DB) *PostgresTripRepository {
 // createtrip-terminal()
 func (r *PostgresTripRepository) Create(ctx context.Context, trp models.Trip) (models.Trip, error) {
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO trips (id, passenger_id, driver_id, terminal_id, fare_amount, driver_payout, platform_fee, pickup_lat, pickup_lng, status, tapped_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		trp.ID, trp.PassengerID, trp.DriverID, trp.TerminalID, trp.FareAmount, trp.DriverPayout, trp.PlatformFee, trp.PickupLat, trp.PickupLng, trp.Status, trp.TappedAt)
+		`INSERT INTO trips (
+			id,
+			passenger_id,
+			driver_id,
+			terminal_id,
+			fare_amount,
+			passenger_platform_fee,
+			driver_platform_fee,
+			passenger_total,
+			driver_payout,
+			platform_total,
+			pickup_lat,
+			pickup_lng,
+			status,
+			tapped_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+		trp.ID,
+		trp.PassengerID,
+		trp.DriverID,
+		trp.TerminalID,
+		trp.FareAmount,
+		trp.PassengerPlatformFee,
+		trp.DriverPlatformFee,
+		trp.PassengerTotal,
+		trp.DriverPayout,
+		trp.PlatformTotal,
+		trp.PickupLat,
+		trp.PickupLng,
+		trp.Status,
+		trp.TappedAt,
+	)
+
 	return trp, err
 }
 
@@ -140,7 +170,7 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trp models.Trip) (m
 func (r *PostgresTripRepository) FindByPassenger(ctx context.Context, passengerID uuid.UUID) ([]models.Trip, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, passenger_id, driver_id, terminal_id,
-		        fare_amount, driver_payout, platform_fee,
+		        fare_amount, passenger_platform_fee, driver_platform_fee, passenger_total, driver_payout, platform_total,
 		        pickup_lat, pickup_lng, status, tapped_at
 		 FROM trips
 		 WHERE passenger_id = $1
@@ -163,8 +193,11 @@ func (r *PostgresTripRepository) FindByPassenger(ctx context.Context, passengerI
 			&trp.DriverID,
 			&trp.TerminalID,
 			&trp.FareAmount,
+			&trp.PassengerPlatformFee,
+			&trp.DriverPlatformFee,
+			&trp.PassengerTotal,
 			&trp.DriverPayout,
-			&trp.PlatformFee,
+			&trp.PlatformTotal,
 			&trp.PickupLat,
 			&trp.PickupLng,
 			&trp.Status,
@@ -183,7 +216,7 @@ func (r *PostgresTripRepository) FindByPassenger(ctx context.Context, passengerI
 func (r *PostgresTripRepository) FindByDriver(ctx context.Context, driverID uuid.UUID) ([]models.Trip, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, passenger_id, driver_id, terminal_id,
-		        fare_amount, driver_payout, platform_fee,
+		        fare_amount, passenger_platform_fee, driver_platform_fee, passenger_total, driver_payout, platform_total,
 		        pickup_lat, pickup_lng, status, tapped_at
 		 FROM trips
 		 WHERE driver_id = $1
@@ -206,8 +239,11 @@ func (r *PostgresTripRepository) FindByDriver(ctx context.Context, driverID uuid
 			&trp.DriverID,
 			&trp.TerminalID,
 			&trp.FareAmount,
+			&trp.PassengerPlatformFee,
+			&trp.DriverPlatformFee,
+			&trp.PassengerTotal,
 			&trp.DriverPayout,
-			&trp.PlatformFee,
+			&trp.PlatformTotal,
 			&trp.PickupLat,
 			&trp.PickupLng,
 			&trp.Status,

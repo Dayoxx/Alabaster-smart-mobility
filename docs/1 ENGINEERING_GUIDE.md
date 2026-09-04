@@ -10,8 +10,8 @@ If something here conflicts with the architecture doc, the architecture doc wins
 
 **Golden rules these are non-negotiable, not style preferences:**
 
-1. **Never touch `*sql.DB` directly in a handler.** Always go through a repository interface. This is the dependency injection seam that makes the whole system testable — breaking it once means every test after that has to hit a real database.
-2. **Never store mutable state in a package-level variable.** The original prototype had `var Users = []User{}` a global slice mutated across goroutines with zero locking. It was a real, live data race. It's also the exact pattern that makes horizontal scaling (Layer 11) impossible later. If you're tempted to write `var something = []Thing{}` at package scope, stop — that state belongs in Postgres or nowhere.
+1. **Never touch `*sql.DB` directly in a handler.** Always go through a repository interface. This is the dependency injection seam that makes the whole system testable breaking it once means every test after that has to hit a real database.
+2. **Never store mutable state in a package-level variable.** The original prototype had `var Users = []User{}` a global slice mutated across goroutines with zero locking. It was a real, live data race. It's also the exact pattern that makes horizontal scaling (Layer 11) impossible later. If you're tempted to write `var something = []Thing{}` at package scope, stop that state belongs in Postgres or nowhere.
 3. **Every query is parameterized.** `$1, $2...` never string concatenation, never `fmt.Sprintf` into SQL, ever.
 4. **Secrets never enter source control.** Environment variables only. If you paste an API key into a file, you've already failed this rule even if you delete it before committing — rotate it.
 5. **Payment and session data is never cached.** Fare tables and dashboard aggregates can be. Balances, sessions, and trip state cannot.
@@ -23,9 +23,9 @@ If you're not sure whether something violates one of these, ask before you PR it
 
 ## 1. Frontend Foundations
 
-### Flutter (Driver / Passenger / Student app)
+### Flutter (Driver / Passenger)
 
-**Folder structure is feature-first, not layer-first.** Don't create a global `screens/` folder with everything dumped in — each feature owns its own `screens/`, `widgets/`, `providers/` internally.
+**Folder structure is feature-first, not layer-first.** Don't create a global `screens/` folder with everything dumped in each feature owns its own `screens/`, `widgets/`, `providers/` internally.
 
 ```
 lib/
@@ -42,7 +42,6 @@ lib/
 │   │   ├── transaction_history/
 │   │   └── vehicle_mode/keke/
 │   ├── passenger_home/
-│   ├── student_home/
 │   ├── admin_home/       # mobile, monitori-only — never build privileged actions here
 │   ├── ops/               # staff-only, HQ
 │   └── agent_ops/         # staff-only, field
@@ -55,7 +54,7 @@ lib/
 - Riverpod providers: end in `Provider` — `sessionStateProvider`, `activeRouteProvider`.
 - Repositories: end in `Repository` — `SessionRepository`, matching the Go-side naming exactly so a dev can find the corresponding backend interface without guessing.
 
-**Adding a new feature — the checklist:**
+**Adding a new feature the checklist:**
 1. Create the feature folder under `features/`.
 2. Define the repository interface in `data/repositories/` *before* writing any UI this mirrors the Go-side discipline of designing the interface first.
 3. Wire a Riverpod provider for any state that outlives a single widget.
@@ -116,7 +115,7 @@ func (app *App) someHandler(c *gin.Context) {
         return
     }
 
-    // call the repository interface — never a concrete *sql.DB
+    // call the repository interface never a concrete *sql.DB
     result, err := app.SomeRepo.DoThing(c.Request.Context(), input.Field)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "could not do thing"})
@@ -129,10 +128,10 @@ func (app *App) someHandler(c *gin.Context) {
 
 **Rules:**
 - Input structs are defined *inline*, inside the handler, unless reused elsewhere. Don't create a top-level `SomeThingRequest` struct for a one-off.
-- Every handler takes `c.Request.Context()` through to the repository call — this is what makes a dropped client connection cancel the underlying query instead of running it to completion uselessly.
+- Every handler takes `c.Request.Context()` through to the repository call this is what makes a dropped client connection cancel the underlying query instead of running it to completion uselessly.
 - Error messages returned to the client are generic (`"could not do thing"`). Real error detail goes to structured logs (Layer 12), never to the response body a verbose error message is a reconnaissance gift to anyone probing the API.
 
-**Repository pattern — the actual DI seam:**
+**Repository pattern the actual DI seam:**
 
 Every repository struct is built against the `Querier` interface (satisfied by both `*sql.DB` and `*sql.Tx`), never `*sql.DB` directly:
 
@@ -144,7 +143,7 @@ type Querier interface {
 }
 ```
 
-This is what lets the exact same repository code run standalone *or* inside a `db.WithTx(...)` transaction — see the tap-flow fix for the reference pattern. If you're writing a handler that does more than one write and they need to succeed or fail together, it belongs inside `WithTx`, full stop.
+This is what lets the exact same repository code run standalone *or* inside a `db.WithTx(...)` transaction see the tap-flow fix for the reference pattern. If you're writing a handler that does more than one write and they need to succeed or fail together, it belongs inside `WithTx`, full stop.
 
 **✅ Do**
 - Write a fake implementation of any repository interface you add, even before you write a test for it. If you can't picture the fake, the interface is wrong.
@@ -168,7 +167,7 @@ func UpdateSomething(id string, newValue T, adminID, reason string) error {
 }
 ```
 
-Old value captured, new value applied, both logged, atomically. If you're writing a new admin action that changes something rather than adding something, use this shape by default — don't invent a fourth slightly different version of it.
+Old value captured, new value applied, both logged, atomically. If you're writing a new admin action that changes something rather than adding something, use this shape by default don't invent a fourth slightly different version of it.
 
 ---
 
@@ -182,22 +181,22 @@ Old value captured, new value applied, both logged, atomically. If you're writin
 **Schema conventions:**
 - Primary keys: `UUID`, always.
 - Columns: `snake_case`.
-- Timestamps: `TIMESTAMPTZ`, never bare `TIMESTAMP` — timezone-naive timestamps are a bug waiting to surface the first time this runs across regions.
-- Foreign keys: `<referenced_table_singular>_id` — `driver_identity_id`, not `driver_id_fk` or `fk_driver`.
-- Booleans: `is_active`, `is_verified` — prefixed, never bare `active`.
+- Timestamps: `TIMESTAMPTZ`, never bare `TIMESTAMP` timezone-naive timestamps are a bug waiting to surface the first time this runs across regions.
+- Foreign keys: `<referenced_table_singular>_id` `driver_identity_id`, not `driver_id_fk` or `fk_driver`.
+- Booleans: `is_active`, `is_verified` prefixed, never bare `active`.
 
 **PostGIS:**
-- Geometry columns are `geometry(Point, 4326)` or `geometry(LineString, 4326)` — 4326 (WGS84) always, don't mix SRIDs.
+- Geometry columns are `geometry(Point, 4326)` or `geometry(LineString, 4326)` 4326 (WGS84) always, don't mix SRIDs.
 - Spatial queries use `ST_DWithin` with `::geography` casts for real-world distance, not raw `ST_Distance` on `geometry` — the latter gives you degrees, not meters, and it's a subtle bug that only shows up when someone eyeballs the numbers and they look wrong.
 
-**Naming trap to know about — `terminal` vs `terminal_location`:**
-These mean genuinely different things and the confusion is easy to reintroduce in code even after it's been fixed in the docs. `terminal` is a driver's physical device (`hardware_serial`, bound to one driver). `terminal_location` is a place Tanke, Challenge. If you're naming a variable, a function parameter, or a column and you write bare `terminal` or `terminalID`, stop and ask which one you mean — then name it `deviceTerminalID` or `terminalLocationID` explicitly. This exact ambiguity already caused real confusion in the architecture doc's own roadmap section; don't let it happen again in code where it's harder to spot.
+**Naming trap to know about `terminal` vs `terminal_location`:**
+These mean genuinely different things and the confusion is easy to reintroduce in code even after it's been fixed in the docs. `terminal` is a driver's physical device (`hardware_serial`, bound to one driver). `terminal_location` is a place Tanke, Challenge. If you're naming a variable, a function parameter, or a column and you write bare `terminal` or `terminalID`, stop and ask which one you mean then name it `deviceTerminalID` or `terminalLocationID` explicitly. This exact ambiguity already caused real confusion in the architecture doc's own roadmap section; don't let it happen again in code where it's harder to spot.
 
 ---
 
 ## 4. Auth & Permissions
 
-*(Design here is now thorough — session middleware for the four customer logins, plus the full admin access model below — but almost none of it is in the real codebase yet, which still only has the stopgap terminal-key check from the `/tap` fix. Whoever picks this up next has a clear spec to build against, not a blank page.)*
+*(Design here is now thorough session middleware for the four customer logins, plus the full admin access model below but almost none of it is in the real codebase yet, which still only has the stopgap terminal-key check from the `/tap` fix. Whoever picks this up next has a clear spec to build against, not a blank page.)*
 
 **Every protected route needs middleware, not an inline check.** Don't write `if session.Role != "driver" { ... }` inside a handler body that pattern gets copy-pasted inconsistently as routes grow. Middleware, applied at route registration:
 
@@ -214,7 +213,7 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 **There is no public admin registration endpoint. Ever.** Don't add one, even a "temporary" one for testing — this is the single easiest way to accidentally let anyone self-grant access to live driver GPS and fare-editing power. The only two ways an admin account gets created:
 1. The first account, via a one-time deployment script, not through the running app.
-2. Every account after that, through `InviteAdmin` — callable only by an existing `super_admin`, and itself a logged, audited action like any other privileged one.
+2. Every account after that, through `InviteAdmin` callable only by an existing `super_admin`, and itself a logged, audited action like any other privileged one.
 
 **WebAuthn/passkey login — use a real library, don't hand-roll the verification.** The challenge-response signature check in `VerifyPasskeyLogin` has known, easy-to-get-wrong edge cases (challenge replay, origin binding) that a maintained library handles correctly. This is exactly the kind of security-critical code where "I'll just implement the spec myself" is how a subtle vulnerability gets shipped — use `go-webauthn` or equivalent, don't write the signature verification from scratch.
 
@@ -226,7 +225,7 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 **Dockerfile is multi-stage** build stage compiles the Go binary, final stage is a minimal image with just the binary. Don't ship the Go toolchain in production images.
 
-**Environment variables** are the only source of configuration — no config files with environment-specific values checked into git. Naming: `SCREAMING_SNAKE_CASE`, prefixed by concern where it helps clarity (`DATABASE_URL`, `MONIEPOINT_API_KEY`, `VSP_ENDPOINT`).
+**Environment variables** are the only source of configuration no config files with environment-specific values checked into git. Naming: `SCREAMING_SNAKE_CASE`, prefixed by concern where it helps clarity (`DATABASE_URL`, `MONIEPOINT_API_KEY`, `VSP_ENDPOINT`).
 
 **Deployment checklist, every time:**
 - [ ] Migrations run *before* the new binary deploys, never after
@@ -237,9 +236,9 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 ## 6. Cloud & Computing
 
-**Three environments, minimum: dev, staging, production.** Never test against production data. Staging uses Moniepoint's sandbox credentials, never live ones — mixing these up is how real money moves during a test.
+**Three environments, minimum: dev, staging, production.** Never test against production data. Staging uses Moniepoint's sandbox credentials, never live ones mixing these up is how real money moves during a test.
 
-**Secrets are environment-scoped** — a staging `DATABASE_URL` and a production one are different values in different places, never the same secret reused "to save time."
+**Secrets are environment-scoped** a staging `DATABASE_URL` and a production one are different values in different places, never the same secret reused "to save time."
 
 ---
 
@@ -247,11 +246,11 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 **Branching**: trunk-based. Short-lived feature branches off `main`, merged via PR, no long-running `develop` branch accumulating drift.
 
-**Commit messages**: describe the *why*, not just the *what* — `"Add replay protection to /tap"` not `"update main.go"`.
+**Commit messages**: describe the *why*, not just the *what* `"Add replay protection to /tap"` not `"update main.go"`.
 
 **Every PR must:**
 - [ ] Pass CI (`go vet`, `go build ./...`, tests, secret scan)
-- [ ] Include a test for any change to session, auth, or payment logic — no exceptions, this is where the fake repository pattern earns its keep
+- [ ] Include a test for any change to session, auth, or payment logic no exceptions, this is where the fake repository pattern earns its keep
 - [ ] Note in the description if it touches a Golden Rule from Section 0
 
 **CI pipeline stages**: lint/vet → build → test → (on merge to `main`) build Docker image → deploy.
@@ -260,17 +259,17 @@ router.POST("/admin/rebind", RequireAdminTier("super_admin"), RequireAudit(), ap
 
 ## 8. Security & Row-Level Security
 
-The full checklist lives in the master architecture doc's Security Checklist section — read it. The rules that matter most *while writing code*, not just planning it:
+The full checklist lives in the master architecture doc's Security Checklist section read it. The rules that matter most *while writing code*, not just planning it:
 
-- Redaction happens in logging middleware, once, centrally. Don't remember to redact per-call-site — you will eventually forget, and it only takes one miss.
-- Row-level security (where it's enabled, T3+) is defense-in-depth against a bug in your own authorization logic — write your Go-side authorization correctly *first*. RLS is a safety net, not a substitute for getting the application logic right.
+- Redaction happens in logging middleware, once, centrally. Don't remember to redact per-call-site you will eventually forget, and it only takes one miss.
+- Row-level security (where it's enabled, T3+) is defense-in-depth against a bug in your own authorization logic write your Go-side authorization correctly *first*. RLS is a safety net, not a substitute for getting the application logic right.
 - Any PR touching `AuthorizeTrip`, `StartDriverSession`, device binding, or payout resolution needs a second reviewer, always, regardless of how small the change looks.
 
 ---
 
 ## 9. Rate Limiting
 
-New endpoint, new rate limit — don't assume the global default covers it. Pattern:
+New endpoint, new rate limit don't assume the global default covers it. Pattern:
 
 ```go
 router.POST("/tap", RateLimitByTerminal(), app.tapHandler)
@@ -309,7 +308,7 @@ slog.Error("trip authorization failed", "terminal_id", terminalID, "error", err)
 
 **What never appears in a log line, at any level**: fingerprint template hashes, session tokens, full account numbers, Moniepoint API keys. If a struct being logged might contain one of these, log specific safe fields instead of the whole struct.
 
-**Sentry** (or equivalent) catches unhandled errors — but don't use it as a substitute for handling errors you already know how to handle. An `if err != nil` you're not sure what to do with is a code smell, not a Sentry ticket.
+**Sentry** (or equivalent) catches unhandled errors but don't use it as a substitute for handling errors you already know how to handle. An `if err != nil` you're not sure what to do with is a code smell, not a Sentry ticket.
 
 ---
 

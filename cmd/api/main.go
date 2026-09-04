@@ -141,7 +141,7 @@ func (app *App) tapHandler(c *gin.Context) {
 	var input struct {
 		PassengerID string  `json:"passenger_id" binding:"required"`
 		TerminalID  string  `json:"terminal_id" binding:"required"`
-		Amount      float64 `json:"amount" binding:"required"`
+		AmountKobo  int64   `json:"amount_kobo" binding:"required"`
 		Lat         float64 `json:"lat"`
 		Lng         float64 `json:"lng"`
 	}
@@ -214,24 +214,41 @@ func (app *App) tapHandler(c *gin.Context) {
 
 	usedAccount := accounts[0]
 
-	platformFee := input.Amount * 0.05
-	driverPayout := input.Amount - platformFee
+	const (
+		PassengerPlatformFeeKobo int64 = 1000
+		DriverPlatformFeeKobo    int64 = 1000
+	)
+
+	if input.AmountKobo <= PassengerPlatformFeeKobo+DriverPlatformFeeKobo {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid fare amount",
+		})
+		return
+	}
+
+	passengerTotal := input.AmountKobo
+	fareAmount := passengerTotal - PassengerPlatformFeeKobo
+	driverPayout := fareAmount - DriverPlatformFeeKobo
+	platformTotal := PassengerPlatformFeeKobo + DriverPlatformFeeKobo
 
 	lat := input.Lat
 	lng := input.Lng
 
 	newTrip := models.Trip{
-		ID:           uuid.New(),
-		PassengerID:  passengerID,
-		DriverID:     terminal.DriverID,
-		TerminalID:   terminalID,
-		FareAmount:   input.Amount,
-		DriverPayout: driverPayout,
-		PlatformFee:  platformFee,
-		PickupLat:    &lat,
-		PickupLng:    &lng,
-		Status:       "success",
-		TappedAt:     time.Now(),
+		ID:                   uuid.New(),
+		PassengerID:          passengerID,
+		DriverID:             terminal.DriverID,
+		TerminalID:           terminalID,
+		FareAmount:           fareAmount,
+		PassengerPlatformFee: PassengerPlatformFeeKobo,
+		DriverPlatformFee:    DriverPlatformFeeKobo,
+		PassengerTotal:       passengerTotal,
+		DriverPayout:         driverPayout,
+		PlatformTotal:        platformTotal,
+		PickupLat:            &lat,
+		PickupLng:            &lng,
+		Status:               "success",
+		TappedAt:             time.Now(),
 	}
 
 	saved, err := app.Trips.Create(
@@ -246,9 +263,10 @@ func (app *App) tapHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"trip":          saved,
-		"paid_from":     usedAccount.BankName,
-		"driver_payout": driverPayout,
+		"trip":            saved,
+		"paid_from":       usedAccount.BankName,
+		"passenger_total": saved.PassengerTotal,
+		"driver_payout":   saved.DriverPayout,
 	})
 }
 
