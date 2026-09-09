@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alabaster Smart Mobility— Master Build Reference</title>
+<title>Alabaster Smart Mobility — Master Build Reference · Current Build</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -222,8 +222,8 @@
 <header>
   <div class="eyebrow">Master Build Reference · Alabaster Smart Mobility</div>
   <h1>Verify once. <span>Travel instantly thereafter.</span></h1>
-  <p class="subhead">One consolidated document — architecture, security fixes, schema, geospatial layer, Flutter structure, admin dashboard, and phased roadmap for the Ilorin transport platform.</p>
-  <div class="principle">Fingerprint = identity, verified once. NFC card = daily key. Terminal = receiver only — it never decides where money goes.</div>
+  <p class="subhead">One consolidated engineering reference — architecture, decisions, current backend implementation, security fixes, payment design, and a linear build path from the work already completed.</p>
+  <div class="principle">Current build principle: establish a safe backend and money model first, then payment integration, then transport credentials and fare control, then authentication and authorization. Nothing is treated as implemented until the code and database support it.</div>
   <div class="stack-row">
     <span class="stack-chip"><b>API</b> Go + Gin</span>
     <span class="stack-chip"><b>DB</b> PostgreSQL + PostGIS</span>
@@ -236,6 +236,7 @@
 
 <nav>
   <a href="#stack">Stack</a>
+  <a href="#current-build">Current Build</a>
   <a href="#app-structure">One App, Three Logins</a>
   <a href="#learning">Learning</a>
   <a href="#revenue">Revenue</a>
@@ -254,7 +255,7 @@
   <a href="#roadmap">Roadmap</a>
   <a href="#layers">13-Layer Map</a>
   <a href="#security">Security Checklist</a>
-  <a href="#tracker">Security Tracker</a>
+  <a href="#tracker">Build Tracker</a>
   <a href="#gaps">Open Gaps</a>
   <a href="#funding">Funding</a>
 </nav>
@@ -264,14 +265,75 @@
   <section id="stack">
     <div class="section-label">Locked decisions</div>
     <h2>Tech stack, end to end</h2>
-    <p>Nothing here is provisional — every phase in this doc builds against these choices.</p>
+    <p>These are the current architectural choices. The status of an individual component is tracked separately; a chosen technology is not automatically an implemented feature.</p>
     <div class="schema">
       <div class="entity"><h4>Backend API</h4><ul><li>Go + Gin</li><li>Owns identity, session, terminal binding, payout resolution, trip ledger</li><li>Only service allowed to decide where funds route</li></ul></div>
-      <div class="entity"><h4>Database</h4><ul><li>PostgreSQL + PostGIS extension</li><li>Migration off in-memory storage completes in T0</li><li>Geo queries live in the same DB — no separate geo store</li></ul></div>
-      <div class="entity"><h4>Payments</h4><ul><li>Moniepoint — collection + disbursement via NIP rails</li><li>Zero-custody — funds never sit in a platform-held wallet</li></ul></div>
-      <div class="entity"><h4>Identity verification</h4><ul><li>NIMC direct, or licensed VSP (T1 default)</li><li>One-time enrollment call; local template cached after</li></ul></div>
+      <div class="entity"><h4>Database</h4><ul><li>PostgreSQL is implemented; PostGIS is planned for the geospatial phase</li><li>Current migrations are sequential and applied through 0003</li><li>Geo queries will remain in PostgreSQL when the geospatial layer is implemented</li></ul></div>
+      <div class="entity"><h4>Payments</h4><ul><li>Moniepoint is the selected payment provider</li><li>Provider integration is not yet implemented</li><li>Zero-custody routing remains the target architecture</li></ul></div>
+      <div class="entity"><h4>Identity verification</h4><ul><li>NIMC direct or licensed VSP remains the planned identity-verification path</li><li>Real identity verification is not yet implemented in the current Go build</li></ul></div>
       <div class="entity"><h4>Driver terminal — Flutter</h4><ul><li>NFC capture, fingerprint capture, GPS ping</li><li>Holds a device-bound key, never a payout config</li></ul></div>
       <div class="entity"><h4>Admin / GIS — React</h4><ul><li>Mapbox GL JS for the live street map</li><li>Deck.gl for heatmap / investor-mode visuals</li><li>Go WebSockets for live position updates</li></ul></div>
+    </div>
+  </section>
+
+
+  <section id="current-build">
+    <div class="section-label">Current engineering checkpoint</div>
+    <h2>Where the build actually stands</h2>
+    <p>This reference is now synchronized to the implementation checkpoint reached before authentication work. The design may describe later capabilities, but the status below distinguishes <strong>implemented</strong>, <strong>approved/design-complete</strong>, and <strong>not yet built</strong>.</p>
+
+    <div class="schema">
+      <div class="entity new-entity">
+        <h4>IMPLEMENTED — BACKEND FOUNDATION</h4>
+        <ul>
+          <li>Go + Gin API</li>
+          <li>PostgreSQL connection and repositories</li>
+          <li>users, passenger_accounts, terminals, trips</li>
+          <li>UUID identifiers and parameterized SQL</li>
+          <li>terminal registration and trip retrieval</li>
+          <li>prototype tap calculation path</li>
+        </ul>
+      </div>
+      <div class="entity new-entity">
+        <h4>IMPLEMENTED — MONEY FOUNDATION</h4>
+        <ul>
+          <li>Financial values represented as BIGINT kobo in PostgreSQL</li>
+          <li>Fare, passenger fee, driver fee, passenger total, driver payout and platform total separated</li>
+          <li>payments table created</li>
+          <li>PaymentRepository + PostgreSQL implementation created</li>
+          <li>Idempotency key uniqueness and provider-reference uniqueness foundation</li>
+        </ul>
+      </div>
+      <div class="entity">
+        <h4>APPROVED — PAYMENT DESIGN</h4>
+        <ul>
+          <li>Payment states: pending, processing, succeeded, failed, unknown</li>
+          <li>Trip state is separate from payment state</li>
+          <li>Unknown is never treated as failed</li>
+          <li>Fallback only on safe, explicitly known failure</li>
+          <li>Moniepoint isolated behind a PaymentProvider boundary</li>
+        </ul>
+      </div>
+      <div class="entity">
+        <h4>NOT YET BUILT — CORE PAYMENT PATH</h4>
+        <ul>
+          <li>Payment service orchestration</li>
+          <li>Real Moniepoint authorization</li>
+          <li>Provider webhook/reconciliation flow</li>
+          <li>Duplicate successful-payment protection</li>
+          <li>Durable concurrent-request handling</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="tag">Important status correction</span>
+      <p><code class="inline">/tap</code> is still a prototype. A response of <code class="inline">success</code> currently means the fare calculation/trip database path succeeded; it does <strong>not</strong> mean Moniepoint actually authorized or moved money. Real payment success begins only after the payment lifecycle is implemented.</p>
+    </div>
+
+    <div class="fix-box">
+      <span class="tag">Linear build rule from here</span>
+      <p>Do not jump to Flutter, NFC, fare routes, dashboards, or authentication simply because those sections are designed. Finish the current backend risk chain first: <strong>idempotency → payment service → provider boundary → Moniepoint → failure/unknown/reconciliation → integrity → transport credentials → fare/session/settlement → hardening → authentication → authorization.</strong></p>
     </div>
   </section>
 
@@ -1116,131 +1178,354 @@
   </section>
 
   <section id="roadmap">
-    <div class="section-label">Sequencing</div>
-    <h2>Build roadmap</h2>
-    <p>Each stop is a shippable state. Stack called out per phase so nothing gets built out of order.</p>
+    <div class="section-label">Linear engineering roadmap</div>
+    <h2>Build order — current checkpoint onward</h2>
+    <p>The roadmap below deliberately starts at the work we have reached instead of pretending the original T0/T1 labels are still the active sequence. Each stage should be closed before the next dependent stage begins.</p>
+
+    <div class="callout">
+      <span class="tag">Current checkpoint</span>
+      <p><strong>Completed foundation:</strong> money representation, payment state design, payment table, payment repository, idempotency-key database constraint, and provider-reference uniqueness foundation. <strong>Current work:</strong> #5 Idempotency. Authentication is intentionally deferred until #3–#25 are worked through.</p>
+    </div>
 
     <div class="route">
-      <div class="stop" id="phase0">
-        <div class="stop-code">TERMINAL 0</div><h3>Foundation fixes</h3>
-        <div class="stop-meta">Before any new feature work</div>
+      <div class="stop">
+        <div class="stop-code">#03 · DONE</div><h3>Money representation</h3>
+        <div class="stop-meta">Closed</div>
         <div class="stop-body">
           <ul>
-            <li>Finish Postgres migration off in-memory storage; enable PostGIS.</li>
-            <li>Add <code class="inline">session</code> table + shift-start auth (fix 1).</li>
-            <li>Add <code class="inline">terminal.hardware_serial</code> + <code class="inline">bound_driver_identity_id</code> (fix 2).</li>
-            <li>Nonce table + replay check on the trip authorization endpoint.</li>
+            <li>Financial values use integer kobo values in Go and BIGINT in PostgreSQL.</li>
+            <li>Trip money fields are separated into fare, passenger platform fee, driver platform fee, passenger total, driver payout and platform total.</li>
+            <li>Historical financial values are stored rather than recomputed from today's configuration.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">Go + Gin</span><span class="stack-chip">PostgreSQL + PostGIS</span></div>
         </div>
       </div>
 
-      <div class="stop" id="phase1">
-        <div class="stop-code">TERMINAL 1</div><h3>Ilorin Keke MVP</h3>
-        <div class="stop-meta">Single vehicle class, single corridor, real money moving</div>
+      <div class="stop">
+        <div class="stop-code">#04 · APPROVED / DESIGN COMPLETE</div><h3>Payment and transaction state model</h3>
+        <div class="stop-meta">Design closed; implementation follows in the payment service</div>
         <div class="stop-body">
           <ul>
-            <li>Passenger enrollment via VSP + Moniepoint account link.</li>
-            <li>Passenger card controls live: status, activate, deactivate, and immediate lost/stolen block; replacement flow available through authorized agent operations.</li>
-            <li><code style="font-family:var(--font-mono);color:var(--teal);">auth/</code> live with two logins: Driver and Passenger — Student and mobile Admin follow once this base is proven.</li>
-            <li>First Flutter build — NFC tap, fingerprint capture, session start screen, all under <code style="font-family:var(--font-mono);color:var(--teal);">driver_home/</code>.</li>
-            <li><code style="font-family:var(--font-mono);color:var(--teal);">driver_home/bank_details</code> live — drivers self-link their payout account (<code style="font-family:var(--font-mono);color:var(--teal);">LinkDriverAccount</code>), closing the gap where nothing previously set one.</li>
-            <li>Device terminals: budget Android phones (NFC + fingerprint built in) mounted on pilot Kekes.</li>
-            <li>2–3 field agents deployed at the pilot corridor's terminal locations, running <code style="font-family:var(--font-mono);color:var(--teal);">agent_ops/</code> — registers passengers and reissues lost cards on the spot.</li>
-            <li>HQ dashboard live in monitoring mode — driver positions, session status — plus the <code style="font-family:var(--font-mono);color:var(--teal);">ops/</code> new-driver flow.</li>
-            <li>Fallback chain live end to end.</li>
-            <li>Pilot route: Tanke ↔ Challenge corridor, 10–20 device terminals.</li>
-            <li><strong>Success metric:</strong> a driver runs a full day cash-free with a clean trip ledger.</li>
+            <li>Payment lifecycle: <code class="inline">PENDING → PROCESSING → SUCCEEDED / FAILED / UNKNOWN</code>.</li>
+            <li>Trip lifecycle is separate from payment lifecycle.</li>
+            <li>Provider uncertainty is represented as <code class="inline">UNKNOWN</code>, never silently converted to failure.</li>
+            <li>Fallback is allowed only when the first payment attempt is known to have failed safely.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">Flutter</span><span class="stack-chip">Go + Gin</span><span class="stack-chip">Moniepoint</span></div>
         </div>
       </div>
 
-      <div class="stop" id="phase2">
-        <div class="stop-code">TERMINAL 2</div><h3>Terminal network + dashboard v1</h3>
-        <div class="stop-meta">Structured routes, first real GIS surface, USSD</div>
+      <div class="stop">
+        <div class="stop-code">#05 · IN PROGRESS</div><h3>Idempotency</h3>
+        <div class="stop-meta">Current engineering task</div>
         <div class="stop-body">
           <ul>
-            <li>Formal terminal/geo-fence entities; entry/exit captured per trip.</li>
-            <li>React + Mapbox dashboard v1 — live map, session status, provisioning console, cross-role oversight.</li>
-            <li><code style="font-family:var(--font-mono);color:var(--teal);">student_home/</code> and the mobile <code style="font-family:var(--font-mono);color:var(--teal);">admin_home/</code> login added, once Driver/Passenger have proven the pattern in T1.</li>
-            <li>USSD via Africa's Talking — balance check, account linking for non-smartphone users.</li>
-            <li><code style="font-family:var(--font-mono);color:var(--teal);">terminal_location</code> + <code style="font-family:var(--font-mono);color:var(--teal);">fare_rule</code> tables built — T1's single flat fare doesn't survive 5 corridors.</li>
-            <li>Fleet transitions to PAX A920 Pro — PAXSTORE registration/review run in parallel with earlier T2 work; <code style="font-family:var(--font-mono);color:var(--teal);">pin_match</code> session verification ships alongside it.</li>
-            <li>Expand to 5 major corridors — Fate Road, Offa Garage, Kulende, Asa Dam. A concrete T2 target, not a ceiling — <code style="font-family:var(--font-mono);color:var(--teal);">route</code> and <code style="font-family:var(--font-mono);color:var(--teal);">route_fare_tier</code> already support any number of corridors, in any state.</li>
-            <li>Reconciliation view for fallback/cash events.</li>
+            <li>Use the existing unique payment <code class="inline">idempotency_key</code> as the durable duplicate-request boundary.</li>
+            <li>Exact retries reuse the same key; a fallback attempt receives a new key.</li>
+            <li>Handle duplicate-key races deterministically and return the existing payment attempt rather than creating a second one.</li>
+            <li>Protect the separate invariant that one trip cannot end with multiple successful payments.</li>
+            <li>Add tests for repeated requests and concurrent requests.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">React</span><span class="stack-chip">Mapbox/Leaflet</span><span class="stack-chip">Go + Gin</span></div>
         </div>
       </div>
 
-      <div class="stop" id="phase3">
-        <div class="stop-code">TERMINAL 3</div><h3>Admin tooling + investor mode</h3>
-        <div class="stop-meta">Fare editing, extensible states/institutions, dashboard goes investor-facing</div>
+      <div class="stop">
+        <div class="stop-code">#06 · NEXT</div><h3>Payment provider boundary</h3>
+        <div class="stop-meta">Isolate business logic from Moniepoint mechanics</div>
         <div class="stop-body">
           <ul>
-            <li>Fare management live — <code style="font-family:var(--font-mono);color:var(--teal);">UpdateFare</code> + <code style="font-family:var(--font-mono);color:var(--teal);">fare_change_log</code>, so a union-negotiated fare change is an admin action, not a code deploy.</li>
-            <li>State &amp; institution management live — <code style="font-family:var(--font-mono);color:var(--teal);">AddState</code> / <code style="font-family:var(--font-mono);color:var(--teal);">AddInstitution</code>. Capability built now; actually operating in a second state stays a T5 business decision, not a T3 one.</li>
-            <li>Deck.gl heatmap + revenue ticker + coverage growth slider — investor demo mode.</li>
-            <li>Formal Keke cooperative onboarding; grant applications (Tony Elumelu, GIZ, NITDA).</li>
+            <li>Introduce the application-level <code class="inline">PaymentProvider</code> boundary.</li>
+            <li>Keep Moniepoint-specific authentication, payloads, references, retries, errors and webhooks outside core trip/payment logic.</li>
+            <li>Confirm the interface against the actual Moniepoint API capabilities before implementation.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">Flutter</span><span class="stack-chip">Deck.gl</span><span class="stack-chip">Go + Gin</span></div>
         </div>
       </div>
 
-      <div class="stop" id="phase4">
-        <div class="stop-code">TERMINAL 4</div><h3>Partner integration + BRT</h3>
-        <div class="stop-meta">Taxi/bus operators connect in — only once T1–T3 have real numbers</div>
+      <div class="stop">
+        <div class="stop-code">#07</div><h3>Moniepoint integration</h3>
+        <div class="stop-meta">Real authorization begins here</div>
         <div class="stop-body">
           <ul>
-            <li>Expose identity verification + terminal binding as a public API; partners keep their own passenger app and pricing.</li>
-            <li>BRT integration — same backend, <code class="inline">terminal_type='bus'</code>, payout to company account.</li>
-            <li>Route planning layer — OpenStreetMap + OSRM.</li>
-            <li>World Bank MOBILIST, IFC, BOI institutional funding round.</li>
+            <li>Implement the Moniepoint adapter only after its current API contract is verified.</li>
+            <li>Persist provider references and durable payment outcomes.</li>
+            <li>Make provider retries safe and traceable.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">Go + Gin (public API)</span></div>
         </div>
       </div>
 
-      <div class="stop" id="phase5">
-        <div class="stop-code">TERMINAL 5</div><h3>City mobility OS</h3>
-        <div class="stop-meta">Multi-city, full intelligence layer</div>
+      <div class="stop">
+        <div class="stop-code">#08</div><h3>Payment failure, unknown states &amp; reconciliation</h3>
+        <div class="stop-meta">Recover safely from provider uncertainty</div>
         <div class="stop-body">
           <ul>
-            <li>Multi-state expansion using <code style="font-family:var(--font-mono);color:var(--teal);">AddState</code> (built in T3) — abstracted payment rails and modular localization from T1 pay off here. Institutions get added the same way, once real university data arrives.</li>
-            <li>Dashboard grows into investigation/emergency-response tooling on the existing trip ledger.</li>
-            <li>Direct NIMC accreditation worth pursuing once volume justifies it over the VSP.</li>
-            <li>ODM-customized or fully custom device terminal hardware — relationship-building starts informally in T2–T3; mandatory NCC type approval, optional PCI PTS certification for A920-level trust assurance.</li>
+            <li>Timeout/unknown responses become <code class="inline">UNKNOWN</code>; never immediately try another account.</li>
+            <li>Support provider status lookup and webhook confirmation.</li>
+            <li>Introduce reconciliation states and operational handling for unresolved payments.</li>
+            <li>Only a confirmed successful payment can financially complete a fare.</li>
           </ul>
-          <div class="stop-stack"><span class="stack-chip">Full stack, multi-region</span></div>
         </div>
       </div>
+
+      <div class="stop">
+        <div class="stop-code">#09</div><h3>Server-controlled fare</h3>
+        <div class="stop-meta">Remove client authority over the amount</div>
+        <div class="stop-body">
+          <ul>
+            <li>Remove the permanent client-controlled <code class="inline">amount_kobo</code> from the tap authorization path.</li>
+            <li>Resolve the fare on the server from the transport context.</li>
+            <li>Display the resolved fare before the passenger confirms the tap.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#10</div><h3>Database transaction &amp; integrity strategy</h3>
+        <div class="stop-meta">Make the financial path atomic where it must be</div>
+        <div class="stop-body">
+          <ul>
+            <li>Wrap the local payment/trip state transitions that must commit together in real database transactions.</li>
+            <li>Enforce critical uniqueness and relationship invariants in PostgreSQL where practical.</li>
+            <li>Keep provider calls outside unsafe long-running database locks and reconcile provider uncertainty explicitly.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#11</div><h3>NFC passenger card / credential</h3>
+        <div class="stop-meta">Introduce the physical transport credential</div>
+        <div class="stop-body">
+          <ul>
+            <li>Model the company-issued NFC card as a credential, not a wallet and not a bank account.</li>
+            <li>Bind the credential to passenger identity without exposing raw card identifiers unnecessarily.</li>
+            <li>Keep linked bank accounts independent from card state.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#12</div><h3>Card lifecycle</h3>
+        <div class="stop-meta">Passenger-controlled credential security</div>
+        <div class="stop-body">
+          <ul>
+            <li><code class="inline">ACTIVE ↔ INACTIVE</code> for temporary control.</li>
+            <li><code class="inline">ACTIVE / INACTIVE → BLOCKED</code> for lost, stolen or compromised cards.</li>
+            <li><code class="inline">BLOCKED → VOID + replacement</code> after authorized identity verification.</li>
+            <li>Normally maintain one active physical card per passenger and retain old credentials for audit history.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#13</div><h3>Driver operating session</h3>
+        <div class="stop-meta">Separate terminal registration from live operation</div>
+        <div class="stop-body">
+          <ul>
+            <li>A registered terminal does not by itself prove who is operating it.</li>
+            <li>Create a short-lived renewable driver session bound to driver + terminal.</li>
+            <li>Session expiry, anomaly checks and re-verification become authorization inputs for taps.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#14</div><h3>Fare rules</h3>
+        <div class="stop-meta">Make pricing deterministic and auditable</div>
+        <div class="stop-body">
+          <ul>
+            <li>Support explicit named terminal fares.</li>
+            <li>Support route stop-count tiers for intermediate stops.</li>
+            <li>Use distance bands only as a controlled fallback.</li>
+            <li>Persist the exact fare source/version used by each trip.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#15</div><h3>Route model</h3>
+        <div class="stop-meta">Give the fare engine real transport structure</div>
+        <div class="stop-body">
+          <ul>
+            <li>Create routes and ordered route stops.</li>
+            <li>Allow the driver to choose the route for the operating session.</li>
+            <li>Use the route to scope the destination picker and fare calculation.</li>
+            <li>Pilot target remains the Ilorin Keke corridor before broader expansion.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#16</div><h3>Driver receiving account</h3>
+        <div class="stop-meta">Resolve payout destination on the server</div>
+        <div class="stop-body">
+          <ul>
+            <li>Driver links and verifies a receiving account through a controlled flow.</li>
+            <li>Tap requests never supply or override the payout destination.</li>
+            <li>For driver-controlled transport, the server resolves the driver receiving account from trusted records.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#17</div><h3>Daily driver ticket</h3>
+        <div class="stop-meta">Separate operating levy from trip economics</div>
+        <div class="stop-body">
+          <ul>
+            <li>Model the daily ticket/levy as its own financial event.</li>
+            <li>Trigger it on the first successful fare of the operating day.</li>
+            <li>Make it idempotent so retries cannot double-debit the driver.</li>
+            <li>Keep ticket history visible alongside driver fare transactions.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#18</div><h3>Settlement</h3>
+        <div class="stop-meta">Separate payment success from payout completion</div>
+        <div class="stop-body">
+          <ul>
+            <li>Track settlement independently: pending, processing, succeeded, failed or unknown.</li>
+            <li>Resolve company-controlled versus driver-controlled receiving destinations server-side.</li>
+            <li>Provide operational reconciliation for payout failures and unknown outcomes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#19</div><h3>Payment, trip &amp; driver history</h3>
+        <div class="stop-meta">Turn the ledger into usable product surfaces</div>
+        <div class="stop-body">
+          <ul>
+            <li>Passenger sees their own payment/trip history.</li>
+            <li>Driver sees their own fares, payouts and daily ticket activity.</li>
+            <li>All views are server-scoped to the authenticated identity.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#20</div><h3>Versioned fee configuration</h3>
+        <div class="stop-meta">Stop hardcoding business economics</div>
+        <div class="stop-body">
+          <ul>
+            <li>Move passenger and driver platform fees into configurable rules.</li>
+            <li>Snapshot the applied fee configuration/version on each financial transaction.</li>
+            <li>Future fee changes must not rewrite historical economics.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#21</div><h3>Audit logs</h3>
+        <div class="stop-meta">Make every sensitive action explainable</div>
+        <div class="stop-body">
+          <ul>
+            <li>Audit card state changes, terminal binding, account changes, payment state changes, settlement actions and privileged operations.</li>
+            <li>Capture actor, target, previous state, new state, reason and timestamp where applicable.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#22</div><h3>API error system</h3>
+        <div class="stop-meta">Replace ad-hoc error strings with stable contracts</div>
+        <div class="stop-body">
+          <ul>
+            <li>Define stable machine-readable error codes.</li>
+            <li>Separate validation, authentication, authorization, payment, conflict, provider and internal errors.</li>
+            <li>Keep sensitive provider details out of public responses and logs.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#23</div><h3>Rate limiting</h3>
+        <div class="stop-meta">Protect the financial and device-facing endpoints</div>
+        <div class="stop-body">
+          <ul>
+            <li>Rate-limit tap requests per terminal/device and public requests per IP where appropriate.</li>
+            <li>Return stable 429 behavior without exposing internal limiter state.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#24</div><h3>Observability &amp; logging</h3>
+        <div class="stop-meta">Know what the system is doing before users report it</div>
+        <div class="stop-body">
+          <ul>
+            <li>Structured server logs with sensitive-field redaction.</li>
+            <li>Health checks and useful operational metrics.</li>
+            <li>Error tracking and provider/payment monitoring.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#25</div><h3>Tests, security hardening &amp; deployment readiness</h3>
+        <div class="stop-meta">Close the MVP backend before identity access control</div>
+        <div class="stop-body">
+          <ul>
+            <li>Unit and integration tests for payment, trip, idempotency, fallback, reconciliation and card/session invariants.</li>
+            <li>Concurrency and duplicate-request tests.</li>
+            <li>Dependency/security scanning, secret handling, backups and deployment checks.</li>
+            <li>Only when this stage is stable should authentication become the next major track.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#01 · AFTER #25</div><h3>Authentication</h3>
+        <div class="stop-meta">Next major track after the current 3–25 hardening sequence</div>
+        <div class="stop-body">
+          <ul>
+            <li>Passenger, driver, agent/ops and administrator authentication.</li>
+            <li>Server-side identity from tokens/sessions; never trust client-supplied passenger or driver IDs for authorization.</li>
+            <li>Session lifecycle and secure credential handling.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stop">
+        <div class="stop-code">#02 · AFTER #01</div><h3>Authorization</h3>
+        <div class="stop-meta">Enforce who may perform which action</div>
+        <div class="stop-body">
+          <ul>
+            <li>Passenger can access only their own accounts, cards and history.</li>
+            <li>Driver can operate only their active terminal/session and see their own financial history.</li>
+            <li>Agents, ops and super-admins receive narrowly scoped privileged permissions.</li>
+            <li>Privileged actions are audited.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="fix-box">
+      <span class="tag">Next immediate move</span>
+      <p><strong>#05 Idempotency.</strong> The next implementation work should stay inside the existing Go/PostgreSQL backend until duplicate requests, concurrent requests and successful-payment uniqueness are safe. Do not start Moniepoint calls from <code class="inline">/tap</code> until that foundation is closed.</p>
     </div>
   </section>
 
   <section id="layers">
-    <div class="section-label">Full production audit</div>
+    <div class="section-label">Current production audit</div>
     <h2>13-layer architecture map</h2>
     <p>Everything built so far, checked against the thirteen layers a real production system needs — what's covered, what's partial, and what's a genuine gap with a concrete proposal, not just a name on a list.</p>
 
     <div class="sec-phase">
       <div class="sec-phase-head"><span class="layer-num">01</span><span class="sec-phase-name">Frontend foundations</span><span class="layer-status covered">Covered</span></div>
-      <p style="margin:0;font-size:13.5px;">Flutter (four logins — Driver, Passenger, Student, Admin-mobile) + React (admin web dashboard). See "One App, Four Logins" and the Flutter Structure section. What's left is implementation, not design.</p>
+      <p style="margin:0;font-size:13.5px;">Flutter and React are planned client surfaces; neither has been started in the current implementation checkpoint. The current working product is the Go + Gin + PostgreSQL backend.</p>
     </div>
 
     <div class="sec-phase">
       <div class="sec-phase-head"><span class="layer-num">02</span><span class="sec-phase-name">APIs &amp; backend logic</span><span class="layer-status covered">Covered</span></div>
-      <p style="margin:0;font-size:13.5px;">Go + Gin. Eleven pseudocode flows plus real working code (register, link-account, tap, trips, terminals) with the auth/transaction/shutdown fixes already applied. See the Pseudocode section.</p>
+      <p style="margin:0;font-size:13.5px;">Go + Gin. Working backend code currently covers registration, passenger account linking, terminal registration, trip retrieval and a prototype tap calculation path. Authentication, real payment authorization and production tap transaction orchestration are not yet implemented. See the Pseudocode section.</p>
     </div>
 
     <div class="sec-phase">
       <div class="sec-phase-head"><span class="layer-num">03</span><span class="sec-phase-name">Database &amp; storage</span><span class="layer-status covered">Covered</span></div>
-      <p style="margin:0;font-size:13.5px;">PostgreSQL + PostGIS, full schema across identity, session, terminal, credential, card_batch, and geo tables. See Data Model and Geospatial Layer.</p>
+      <p style="margin:0;font-size:13.5px;">PostgreSQL is implemented with the current users, passenger_accounts, terminals, trips and payments schema. PostGIS, session, credential, route and geospatial tables remain planned. See Data Model and Geospatial Layer.</p>
     </div>
 
     <div class="sec-phase">
       <div class="sec-phase-head"><span class="layer-num">04</span><span class="sec-phase-name">Auth &amp; permissions</span><span class="layer-status partial">Partial</span></div>
-      <p style="margin:0 0 8px;font-size:13.5px;">Design is thorough — identity/session/device-binding, four-login role routing, RBAC on the admin dashboard (ops vs. super-admin). <strong>Gap:</strong> the real Go code only has the stopgap terminal-key check from the /tap fix — no JWT/session-token middleware yet for the four logins, no RBAC actually enforced in code. This is the real next code milestone, not just a design one.</p>
+      <p style="margin:0 0 8px;font-size:13.5px;">Authentication and authorization are intentionally deferred until the current #3–#25 engineering sequence is closed. The current Go API still accepts client-supplied identity identifiers in prototype flows; these must be replaced with server-derived identity after authentication is implemented.</p>
     </div>
 
     <div class="sec-phase">
@@ -1412,7 +1697,7 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
 
   <section id="tracker">
     <div class="section-label">Work through it, don't just read it</div>
-    <h2>Security tracker</h2>
+    <h2>Linear build tracker</h2>
     <p>Same items as the security checklist above, plus the open gaps section below, all checkable — your progress is saved automatically and will still be here next time you open this file. Check things off as you actually implement them, not as you plan to.</p>
 
     <div class="tracker-overall">
@@ -1425,106 +1710,85 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
 
     <div id="tracker-phases"></div>
     <button class="tracker-reset" id="tracker-reset">Reset all progress</button>
-    <p class="tracker-note">Saved to this file's own storage — separate from any other artifact. If it ever fails to save, your checks still work for the session, just won't persist on reload.</p>
+    <p class="tracker-note">The checklist is a working progress tracker. The roadmap above is the authoritative build order; checking an item here records your working progress locally.</p>
   </section>
 
   <script>
   (function(){
     const DATA = [
-      { phase: "T0", name: "Foundation", items: [
-        ["t0-tls","TLS on every connection — Flutter↔Go, Go↔Moniepoint/VSP, and the Postgres connection string"],
-        ["t0-secrets","Secrets in env vars / secrets manager — never in source control"],
-        ["t0-dbrole","Least-privilege Postgres role for the Go API, not superuser"],
-        ["t0-params","All queries parameterized — no string-concatenated SQL"],
-        ["t0-logs","Structured logging that redacts sensitive fields"],
-        ["t0-envsep","Separate credentials for sandbox vs. production"],
-        ["t0-noncetable","Nonce table + audit log table designed up front"],
-        ["t0-health","/health endpoint exists — pings DB, returns real status"],
-        ["t0-cicd","CI pipeline: build + vet + test on every push"],
-        ["t0-hosting","Hosting target chosen and deployed (Docker on a droplet, TLS via reverse proxy)"],
-        ["t0-graceful-shutdown","Graceful shutdown on SIGINT/SIGTERM — in-flight requests drained, not killed"],
-        ["t0-tls-server","API server has TLS termination (reverse proxy or direct) — not serving plain HTTP"],
+      { phase: "#03", name: "Money representation — DONE", items: [
+        ["m3-money","BIGINT/kobo money representation implemented and verified"],
+        ["m3-split","Fare and passenger/driver/platform totals separated"],
       ]},
-      { phase: "T1", name: "MVP", items: [
-        ["t1-rawscan","Raw fingerprint scans discarded immediately after hashing"],
-        ["t1-di","VSP and Moniepoint calls wired behind injected interfaces"],
-        ["t1-webhook","Moniepoint webhook signature verification"],
-        ["t1-idempotency","Idempotency key on every Moniepoint call — the nonce, not trip_id"],
-        ["t1-duptap","Short-window duplicate-tap check catches a second distinct tap for the same boarding event"],
-        ["t1-validation","Gin binding + validation tags on every request struct"],
-        ["t1-ratelimit","Rate limiting on /tap and /location"],
-        ["t1-vulnscan","Dependency vulnerability scanning (govulncheck, pub audit)"],
-        ["t1-tap-auth","/tap rejects requests with no valid terminal credential — not open to anyone who knows a terminal_id"],
-        ["t1-tx-wrap","Tap flow wrapped in a real DB transaction with rollback, not independent inserts"],
-        ["t1-backups","Automated nightly Postgres backup running"],
-        ["t1-uptime","Free uptime monitor pinging /health"],
-        ["t1-alerting","Error tracking wired up (Sentry or similar) — pulled forward from T3, cheap enough not to wait"],
-        ["t1-card-state","Passenger card state machine enforced: active / inactive / blocked / void"],
-        ["t1-card-controls","Passenger can activate, deactivate and immediately block their current card"],
-        ["t1-card-reissue","Lost/stolen replacement flow verifies identity, voids old credential and activates new credential"],
+      { phase: "#04", name: "Payment state model — APPROVED", items: [
+        ["m4-states","Payment states defined: pending, processing, succeeded, failed, unknown"],
+        ["m4-separate","Payment, trip and settlement lifecycles kept separate"],
       ]},
-      { phase: "T2", name: "Terminal network + dashboard", items: [
-        ["t2-adminauth","Admin auth stronger than driver session auth"],
-        ["t2-rbac","Role-based access — ops vs. super-admin"],
-        ["t2-2fa","WebAuthn/passkey login for admin (device biometric, key never leaves device) — password + 2FA as fallback"],
-        ["t2-hwkey","Hardware security key option evaluated for super_admin once that circle is stable"],
-        ["t2-bootstrap","Admin bootstrap script exists; zero public registration path confirmed"],
-        ["t2-cors","CORS locked to the dashboard's real origin"],
-        ["t2-csrf","CSRF protection (or bearer tokens instead of cookies)"],
-        ["t2-audit","Audit log extended to every privileged action"],
+      { phase: "#05", name: "Idempotency — IN PROGRESS", items: [
+        ["m5-create","Create payment attempt through a service boundary"],
+        ["m5-duplicate","Handle duplicate idempotency keys deterministically"],
+        ["m5-concurrency","Handle concurrent identical requests safely"],
+        ["m5-trip-success","Enforce one successful payment per trip"],
+        ["m5-tests","Add idempotency and concurrency tests"],
       ]},
-      { phase: "T3", name: "Admin tooling + investor mode", items: [
-        ["t3-keyrotation","Key rotation policy for device-bound signing keys"],
-        ["t3-caching","Short-TTL cache on dashboard aggregate queries (heatmap, corridor stats)"],
-        ["t3-rls","Row-level security enabled as defense-in-depth on trip/identity tables"],
-        ["t3-dpia","NDPR data protection impact assessment written"],
-        ["t3-anomaly","Anomaly thresholds tuned against real false-positive rates"],
-        ["t3-farearedit","UpdateFare + fare_change_log live — fare changes are an admin edit, not a redeploy"],
-        ["t3-statemgmt","AddState / AddInstitution built — expansion is a row insert, not a schema change"],
+      { phase: "#06", name: "Payment provider boundary — NEXT", items: [
+        ["m6-interface","Define PaymentProvider against verified provider capabilities"],
+        ["m6-isolation","Keep Moniepoint-specific mechanics out of core business logic"],
       ]},
-      { phase: "T4", name: "Partner integration", items: [
-        ["t4-partnerauth","Partner API uses its own auth scheme, separate from driver/passenger tokens"],
-        ["t4-quotas","Per-partner rate limiting and usage quotas"],
-        ["t4-waf","WAF / DDoS protection in front of the public API"],
-        ["t4-pentest","Third-party penetration test completed"],
-        ["t4-incident","Incident response plan written down"],
-        ["t4-ws-scale","Redis pub/sub (or sticky sessions) in place before /ws/map runs on more than one API instance"],
+      { phase: "#07", name: "Moniepoint integration", items: [
+        ["m7-auth","Implement provider authentication/configuration"],
+        ["m7-charge","Implement payment authorization"],
+        ["m7-reference","Persist provider references"],
+        ["m7-retry","Make provider retry behavior idempotent"],
       ]},
-      { phase: "T5", name: "City OS", items: [
-        ["t5-backup","Backup and disaster recovery tested with real drills"],
-        ["t5-retention","Data retention and right-to-erasure policy in place"],
-        ["t5-audits","Regular third-party security audits scheduled"],
-        ["t5-multiregion","Security posture re-reviewed per new city"],
+      { phase: "#08", name: "Failure / unknown / reconciliation", items: [
+        ["m8-unknown","Persist UNKNOWN when provider outcome cannot be confirmed"],
+        ["m8-webhook","Handle verified provider confirmation"],
+        ["m8-reconcile","Build reconciliation path"],
+        ["m8-fallback","Allow fallback only for known-safe failures"],
       ]},
-      { phase: "ALL", name: "Cutting across every phase", items: [
-        ["x-di","Dependency injection on every external integration"],
-        ["x-leastpriv","Least privilege everywhere — DB, admin, API scopes"],
-        ["x-nosecrets","No secrets in git, enforced by a pre-commit / CI scan"],
-        ["x-redact","Logs redact sensitive fields by default, via middleware"],
+      { phase: "#09", name: "Server-controlled fare", items: [
+        ["m9-serverfare","Resolve fare server-side"],
+        ["m9-removeamount","Remove permanent client authority over amount"],
       ]},
-      { phase: "GAP", name: "Open gaps — beyond the architecture", items: [
-        ["g-offline","Flutter app queues signed trips offline, syncs on reconnect"],
-        ["g-nonce-delay","Replay logic tolerates delayed submission, not just live taps"],
-        ["g-cbn","CBN licensing category confirmed with an actual legal read"],
-        ["g-legal-docs","Terms of service, privacy policy, dispute/refund policy written"],
-        ["g-agent-onboard","Agent onboarding and accountability process defined"],
-        ["g-agent-logistics","Card batch allocation + shift reconciliation built (designed — see AllocateCards / ReconcileShift)"],
-        ["g-agent-device","Agent enrollment device chosen"],
-        ["g-agent-visibility","Agent performance visible on the HQ dashboard"],
-        ["g-integration-tests","Integration tests for the full tap→debit→payout chain"],
-        ["g-load-tests","Load testing for simultaneous rush-hour taps"],
-        ["g-device-tests","Device testing across real cheap Android hardware"],
-        ["g-fare-engine","route_fare_tier stop-count pricing built — no per-pair fare rows to maintain (designed, not yet in code)"],
-        ["g-fare-picker","Route/route_stop/session.route_id built — daily driver route choice + scoped picker (designed, not yet in code)"],
-        ["g-settlement","Daily settlement reports built"],
-        ["g-payout-statements","Driver payout statements a driver can read"],
-        ["g-tax","Tax/reporting obligations on platform fee income identified"],
-        ["g-broken-terminal","Process for a broken terminal mid-shift"],
-        ["g-escalation","Escalation path beyond the agent for unresolved disputes"],
+      { phase: "#10", name: "DB transaction / integrity", items: [
+        ["m10-tx","Define local transaction boundaries"],
+        ["m10-invariants","Add critical database invariants"],
       ]},
+      { phase: "#11–#12", name: "Passenger NFC credential + lifecycle", items: [
+        ["m11-credential","Create passenger credential model"],
+        ["m12-state","Enforce active/inactive/blocked/void lifecycle"],
+        ["m12-reissue","Implement secure replacement flow"],
+      ]},
+      { phase: "#13–#18", name: "Session, fare, route, receiving account, ticket, settlement", items: [
+        ["m13-session","Implement driver operating session"],
+        ["m14-fare","Implement deterministic fare rules"],
+        ["m15-route","Implement route and ordered stops"],
+        ["m16-account","Implement driver receiving account resolution"],
+        ["m17-ticket","Implement idempotent daily driver ticket"],
+        ["m18-settlement","Implement settlement lifecycle"],
+      ]},
+      { phase: "#19–#25", name: "History, configuration, audit, errors, limits, observability, hardening", items: [
+        ["m19-history","Passenger and driver financial/trip history"],
+        ["m20-fees","Versioned fee configuration"],
+        ["m21-audit","Audit logging"],
+        ["m22-errors","Stable API error taxonomy"],
+        ["m23-rate","Rate limiting"],
+        ["m24-observe","Structured logging, health and error tracking"],
+        ["m25-tests","End-to-end tests and security/deployment hardening"],
+      ]},
+      { phase: "#01", name: "Authentication — AFTER #25", items: [
+        ["m1-auth","Passenger/driver/staff authentication"],
+        ["m1-identity","Derive identity server-side from authenticated session/token"],
+      ]},
+      { phase: "#02", name: "Authorization — AFTER #01", items: [
+        ["m2-rbac","Role and permission enforcement"],
+        ["m2-scope","Object-level ownership checks"],
+        ["m2-privileged","Privileged action controls and audit coverage"],
+      ]}
     ];
 
-    const STORAGE_KEY = "security-tracker-state";
+    const STORAGE_KEY = "alabaster-linear-build-tracker-v2";
     let state = {};
 
     async function loadState(){
@@ -1537,7 +1801,7 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
 
     async function saveState(){
       try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state)); }
-      catch(e){ /* session-only fallback, no persistence */ }
+      catch(e){}
     }
 
     function toggle(id){
@@ -1548,7 +1812,7 @@ router.<span class="c-fn">GET</span>(<span class="c-str">"/health"</span>, <span
 
     async function resetAll(){
       state = {};
-      await (async()=>{ try{ await window.storage.delete(STORAGE_KEY); }catch(e){} })();
+      try{ await window.storage.delete(STORAGE_KEY); }catch(e){}
       render();
     }
 

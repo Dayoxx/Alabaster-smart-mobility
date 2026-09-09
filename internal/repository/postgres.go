@@ -257,3 +257,145 @@ func (r *PostgresTripRepository) FindByDriver(ctx context.Context, driverID uuid
 
 	return trips, rows.Err()
 }
+
+type PostgresPaymentRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresPaymentRepository(db *sql.DB) *PostgresPaymentRepository {
+	return &PostgresPaymentRepository{db: db}
+}
+
+func (r *PostgresPaymentRepository) Create(
+	ctx context.Context,
+	payment models.Payment,
+) (models.Payment, error) {
+
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO payments (
+			id,
+			trip_id,
+			passenger_id,
+			account_id,
+			amount,
+			status,
+			idempotency_key,
+			provider,
+			provider_reference,
+			created_at,
+			updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		payment.ID,
+		payment.TripID,
+		payment.PassengerID,
+		payment.AccountID,
+		payment.Amount,
+		payment.Status,
+		payment.IdempotencyKey,
+		payment.Provider,
+		payment.ProviderReference,
+		payment.CreatedAt,
+		payment.UpdatedAt,
+	)
+
+	return payment, err
+}
+
+func (r *PostgresPaymentRepository) FindByIdempotencyKey(
+	ctx context.Context,
+	key string,
+) (*models.Payment, error) {
+
+	var payment models.Payment
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			trip_id,
+			passenger_id,
+			account_id,
+			amount,
+			status,
+			idempotency_key,
+			provider,
+			provider_reference,
+			created_at,
+			updated_at
+		FROM payments
+		WHERE idempotency_key = $1`,
+		key,
+	).Scan(
+		&payment.ID,
+		&payment.TripID,
+		&payment.PassengerID,
+		&payment.AccountID,
+		&payment.Amount,
+		&payment.Status,
+		&payment.IdempotencyKey,
+		&payment.Provider,
+		&payment.ProviderReference,
+		&payment.CreatedAt,
+		&payment.UpdatedAt,
+	)
+
+	//The payment doesn't exist error is handled by returning nil, nil. This allows the caller to differentiate between a payment not being found and an actual error occurring during the query.
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &payment, nil
+}
+
+func (r *PostgresPaymentRepository) FindByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Payment, error) {
+
+	var payment models.Payment
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			trip_id,
+			passenger_id,
+			account_id,
+			amount,
+			status,
+			idempotency_key,
+			provider,
+			provider_reference,
+			created_at,
+			updated_at
+		FROM payments
+		WHERE id = $1`,
+		id,
+	).Scan(
+		&payment.ID,
+		&payment.TripID,
+		&payment.PassengerID,
+		&payment.AccountID,
+		&payment.Amount,
+		&payment.Status,
+		&payment.IdempotencyKey,
+		&payment.Provider,
+		&payment.ProviderReference,
+		&payment.CreatedAt,
+		&payment.UpdatedAt,
+	)
+
+	//The payment doesn't exist error is handled by returning nil, nil. This allows the caller to differentiate between a payment not being found and an actual error occurring during the query.
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &payment, nil
+}
