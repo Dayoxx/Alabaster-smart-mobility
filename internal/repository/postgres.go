@@ -258,6 +258,7 @@ func (r *PostgresTripRepository) FindByDriver(ctx context.Context, driverID uuid
 	return trips, rows.Err()
 }
 
+// payments
 type PostgresPaymentRepository struct {
 	db *sql.DB
 }
@@ -268,14 +269,13 @@ func NewPostgresPaymentRepository(db *sql.DB) *PostgresPaymentRepository {
 
 func (r *PostgresPaymentRepository) Create(
 	ctx context.Context,
-	payment models.Payment,
+	payment *models.Payment,
 ) (models.Payment, error) {
 
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO payments (
 			id,
-			trip_id,
-			passenger_id,
+			payment_session_id,
 			account_id,
 			amount,
 			status,
@@ -285,10 +285,9 @@ func (r *PostgresPaymentRepository) Create(
 			created_at,
 			updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		payment.ID,
-		payment.TripID,
-		payment.PassengerID,
+		payment.PaymentSessionID,
 		payment.AccountID,
 		payment.Amount,
 		payment.Status,
@@ -299,7 +298,7 @@ func (r *PostgresPaymentRepository) Create(
 		payment.UpdatedAt,
 	)
 
-	return payment, err
+	return *payment, err
 }
 
 func (r *PostgresPaymentRepository) FindByIdempotencyKey(
@@ -312,8 +311,7 @@ func (r *PostgresPaymentRepository) FindByIdempotencyKey(
 	err := r.db.QueryRowContext(ctx,
 		`SELECT
 			id,
-			trip_id,
-			passenger_id,
+			payment_session_id,
 			account_id,
 			amount,
 			status,
@@ -327,8 +325,7 @@ func (r *PostgresPaymentRepository) FindByIdempotencyKey(
 		key,
 	).Scan(
 		&payment.ID,
-		&payment.TripID,
-		&payment.PassengerID,
+		&payment.PaymentSessionID,
 		&payment.AccountID,
 		&payment.Amount,
 		&payment.Status,
@@ -339,7 +336,6 @@ func (r *PostgresPaymentRepository) FindByIdempotencyKey(
 		&payment.UpdatedAt,
 	)
 
-	//The payment doesn't exist error is handled by returning nil, nil. This allows the caller to differentiate between a payment not being found and an actual error occurring during the query.
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -361,8 +357,7 @@ func (r *PostgresPaymentRepository) FindByID(
 	err := r.db.QueryRowContext(ctx,
 		`SELECT
 			id,
-			trip_id,
-			passenger_id,
+			payment_session_id,
 			account_id,
 			amount,
 			status,
@@ -376,8 +371,7 @@ func (r *PostgresPaymentRepository) FindByID(
 		id,
 	).Scan(
 		&payment.ID,
-		&payment.TripID,
-		&payment.PassengerID,
+		&payment.PaymentSessionID,
 		&payment.AccountID,
 		&payment.Amount,
 		&payment.Status,
@@ -388,7 +382,6 @@ func (r *PostgresPaymentRepository) FindByID(
 		&payment.UpdatedAt,
 	)
 
-	//The payment doesn't exist error is handled by returning nil, nil. This allows the caller to differentiate between a payment not being found and an actual error occurring during the query.
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -398,4 +391,373 @@ func (r *PostgresPaymentRepository) FindByID(
 	}
 
 	return &payment, nil
+}
+
+// Creates and find payer's overall payment operation
+type PostgresPaymentSessionRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresPaymentSessionRepository(db *sql.DB) *PostgresPaymentSessionRepository {
+	return &PostgresPaymentSessionRepository{db: db}
+}
+
+func (r *PostgresPaymentSessionRepository) Create(
+	ctx context.Context,
+	session models.PaymentSession,
+) (models.PaymentSession, error) {
+
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO payment_sessions (
+			id,
+			payer_id,
+			total_amount,
+			status,
+			idempotency_key,
+			created_at,
+			updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		session.ID,
+		session.PayerID,
+		session.TotalAmount,
+		session.Status,
+		session.IdempotencyKey,
+		session.CreatedAt,
+		session.UpdatedAt,
+	)
+
+	return session, err
+}
+
+func (r *PostgresPaymentSessionRepository) FindByIdempotencyKey(
+	ctx context.Context,
+	key string,
+) (*models.PaymentSession, error) {
+
+	var session models.PaymentSession
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			payer_id,
+			total_amount,
+			status,
+			idempotency_key,
+			created_at,
+			updated_at
+		FROM payment_sessions
+		WHERE idempotency_key = $1`,
+		key,
+	).Scan(
+		&session.ID,
+		&session.PayerID,
+		&session.TotalAmount,
+		&session.Status,
+		&session.IdempotencyKey,
+		&session.CreatedAt,
+		&session.UpdatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+func (r *PostgresPaymentSessionRepository) FindByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.PaymentSession, error) {
+
+	var session models.PaymentSession
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			payer_id,
+			total_amount,
+			status,
+			idempotency_key,
+			created_at,
+			updated_at
+		FROM payment_sessions
+		WHERE id = $1`,
+		id,
+	).Scan(
+		&session.ID,
+		&session.PayerID,
+		&session.TotalAmount,
+		&session.Status,
+		&session.IdempotencyKey,
+		&session.CreatedAt,
+		&session.UpdatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+// This one is important because it creates the bridge between the payment and individual trips
+type PostgresPaymentAllocationRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresPaymentAllocationRepository(db *sql.DB) *PostgresPaymentAllocationRepository {
+	return &PostgresPaymentAllocationRepository{db: db}
+}
+
+func (r *PostgresPaymentAllocationRepository) Create(
+	ctx context.Context,
+	allocation models.PaymentAllocation,
+) (models.PaymentAllocation, error) {
+
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO payment_allocations (
+			id,
+			payment_id,
+			trip_id,
+			amount,
+			created_at
+		)
+		VALUES ($1, $2, $3, $4, $5)`,
+		allocation.ID,
+		allocation.PaymentID,
+		allocation.TripID,
+		allocation.Amount,
+		allocation.CreatedAt,
+	)
+
+	return allocation, err
+}
+
+func (r *PostgresPaymentAllocationRepository) FindByTripID(
+	ctx context.Context,
+	tripID uuid.UUID,
+) (*models.PaymentAllocation, error) {
+
+	var allocation models.PaymentAllocation
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			payment_id,
+			trip_id,
+			amount,
+			created_at
+		FROM payment_allocations
+		WHERE trip_id = $1`,
+		tripID,
+	).Scan(
+		&allocation.ID,
+		&allocation.PaymentID,
+		&allocation.TripID,
+		&allocation.Amount,
+		&allocation.CreatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &allocation, nil
+}
+
+func (r *PostgresPaymentAllocationRepository) FindByPaymentID(
+	ctx context.Context,
+	paymentID uuid.UUID,
+) ([]models.PaymentAllocation, error) {
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT
+			id,
+			payment_id,
+			trip_id,
+			amount,
+			created_at
+		FROM payment_allocations
+		WHERE payment_id = $1
+		ORDER BY created_at ASC`,
+		paymentID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var allocations []models.PaymentAllocation
+
+	for rows.Next() {
+		var allocation models.PaymentAllocation
+
+		if err := rows.Scan(
+			&allocation.ID,
+			&allocation.PaymentID,
+			&allocation.TripID,
+			&allocation.Amount,
+			&allocation.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		allocations = append(allocations, allocation)
+	}
+
+	return allocations, rows.Err()
+}
+
+// This repository handles the authorization relationship
+type PostgresPayerTravellerRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresPayerTravellerRepository(db *sql.DB) *PostgresPayerTravellerRepository {
+	return &PostgresPayerTravellerRepository{db: db}
+}
+
+func (r *PostgresPayerTravellerRepository) Create(
+	ctx context.Context,
+	relationship models.PayerTraveller,
+) (models.PayerTraveller, error) {
+
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO payer_travellers (
+			id,
+			payer_id,
+			traveller_id,
+			status,
+			created_at,
+			updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		relationship.ID,
+		relationship.PayerID,
+		relationship.TravellerID,
+		relationship.Status,
+		relationship.CreatedAt,
+		relationship.UpdatedAt,
+	)
+
+	return relationship, err
+}
+
+func (r *PostgresPayerTravellerRepository) FindByPayerAndTraveller(
+	ctx context.Context,
+	payerID uuid.UUID,
+	travellerID uuid.UUID,
+) (*models.PayerTraveller, error) {
+
+	var relationship models.PayerTraveller
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT
+			id,
+			payer_id,
+			traveller_id,
+			status,
+			created_at,
+			updated_at
+		FROM payer_travellers
+		WHERE payer_id = $1
+		  AND traveller_id = $2`,
+		payerID,
+		travellerID,
+	).Scan(
+		&relationship.ID,
+		&relationship.PayerID,
+		&relationship.TravellerID,
+		&relationship.Status,
+		&relationship.CreatedAt,
+		&relationship.UpdatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &relationship, nil
+}
+
+func (r *PostgresPayerTravellerRepository) FindActiveByPayer(
+	ctx context.Context,
+	payerID uuid.UUID,
+) ([]models.PayerTraveller, error) {
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT
+			id,
+			payer_id,
+			traveller_id,
+			status,
+			created_at,
+			updated_at
+		FROM payer_travellers
+		WHERE payer_id = $1
+		  AND status = 'ACTIVE'
+		ORDER BY created_at ASC`,
+		payerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var relationships []models.PayerTraveller
+
+	for rows.Next() {
+		var relationship models.PayerTraveller
+
+		if err := rows.Scan(
+			&relationship.ID,
+			&relationship.PayerID,
+			&relationship.TravellerID,
+			&relationship.Status,
+			&relationship.CreatedAt,
+			&relationship.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		relationships = append(relationships, relationship)
+	}
+
+	return relationships, rows.Err()
+}
+
+func (r *PostgresPayerTravellerRepository) UpdateStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	status string,
+) error {
+
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE payer_travellers
+		SET status = $1,
+		    updated_at = now()
+		WHERE id = $2`,
+		status,
+		id,
+	)
+
+	return err
 }

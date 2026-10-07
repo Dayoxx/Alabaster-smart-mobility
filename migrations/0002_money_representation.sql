@@ -60,14 +60,14 @@ ALTER TABLE trips
 -- Money cannot be negative.
 ALTER TABLE trips
     ADD CONSTRAINT trips_fare_amount_non_negative
-        CHECK (fare_amount >= 0),
+        CHECK (fare_amount > 0),
     ADD CONSTRAINT trips_passenger_platform_fee_non_negative
-        CHECK (passenger_platform_fee >= 0),
+        CHECK (passenger_platform_fee > 0),
     ADD CONSTRAINT trips_driver_platform_fee_non_negative
-        CHECK (driver_platform_fee >= 0),
+        CHECK (driver_platform_fee > 0),
     ADD CONSTRAINT trips_passenger_total_non_negative
-        CHECK (passenger_total >= 0),
+        CHECK (passenger_total > 0),
     ADD CONSTRAINT trips_driver_payout_non_negative
-        CHECK (driver_payout >= 0),
+        CHECK (driver_payout > 0),
     ADD CONSTRAINT trips_platform_total_non_negative
-        CHECK (platform_total >= 0);
+        CHECK (platform_total > 0);

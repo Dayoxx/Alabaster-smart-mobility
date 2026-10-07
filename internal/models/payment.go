@@ -8,8 +8,7 @@ import (
 
 type Payment struct {
 	ID                uuid.UUID `json:"id"`
-	TripID            uuid.UUID `json:"trip_id"`
-	PassengerID       uuid.UUID `json:"passenger_id"`
+	PaymentSessionID  uuid.UUID `json:"payment_session_id"`
 	AccountID         uuid.UUID `json:"account_id"`
 	Amount            int64     `json:"amount"`
 	Status            string    `json:"status"`
