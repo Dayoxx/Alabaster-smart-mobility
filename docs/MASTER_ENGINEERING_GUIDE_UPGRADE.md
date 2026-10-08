@@ -140,6 +140,8 @@ Record: `credential_id`, `identity_id`, `type`, `issued_by`, `issued_at`, `reaso
 
 ## New Section 7A: Bracelet Credentials
 
+> **Update:** the Standard and Elite split is dropped. Every bracelet now carries a Java Card secure element. Part 2, Section 29 replaces the tiers, the key model, the tap flow and the schema in 7A.1 to 7A.4.
+
 ### 7A.1 Scope
 
 A battery-free NFC bracelet replaces the physical card as the main credential. The bracelet identifies the rider at the tap. There is no balance on it. Money still moves through Moniepoint exactly as Section 8 describes.
@@ -316,6 +318,11 @@ Do not enable bracelet pilots until #5 to #10 are done.
 | D4 | May a `phone_hce` credential be active alongside a physical one? | Open | Allow it later, as an explicit exception to the one-active-credential rule, with its own audit |
 | D5 | Database driver: `database/sql` or `pgx/v5`? | Check | Match the guide to whatever the code uses, see Section 10 |
 | D6 | When does the `users` → `identity` rename and the UUID key switch land? | Open | Before `credential` is created, so the new table starts with the right names and key types |
+| D14 | Single bracelet tier with a Java Card secure element in every bracelet | Decided | See Part 2, Section 29 |
+| D15 | Chip family, vendor and quotes at pilot and scale quantities | Open | Start vendor conversations now |
+| D16 | Who writes and maintains the applet | Open | In-house with expert review, contractor, or vendor-supplied. Avoid writing a cryptographic applet unreviewed |
+| D17 | Offline taps | Open | Online-only for the MVP. Revisit together with D2 |
+| D18 | Default limits policy | Open | By rider history, not product tier |
 
 When a decision is made, change its status, add the date and a one-line reason. Do not delete rows.
 

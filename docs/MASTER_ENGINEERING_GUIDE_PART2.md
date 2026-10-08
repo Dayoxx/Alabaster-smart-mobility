@@ -1,6 +1,6 @@
 # Master Engineering Guide: Part 2
 
-New Sections 21 to 28. These follow the upgrade file (`MASTER_ENGINEERING_GUIDE_UPGRADE.md`, which added 7A and 20). Add them to the Table of Contents of `MASTER_ENGINEERING_GUIDE.md`.
+New Sections 21 to 29. These follow the upgrade file (`MASTER_ENGINEERING_GUIDE_UPGRADE.md`, which added 7A and 20). Add them to the Table of Contents of `MASTER_ENGINEERING_GUIDE.md`.
 
 | # | Section |
 |---|---|
@@ -12,12 +12,15 @@ New Sections 21 to 28. These follow the upgrade file (`MASTER_ENGINEERING_GUIDE_
 | 26 | Knowledge library |
 | 27 | Ownership, timeline and open items |
 | 28 | Bracelet instalment plan (₦5,000 + ₦100, repaid ₦10 per commute) |
+| 29 | Single-tier bracelet: Java Card in every bracelet (supersedes the Standard and Elite split) |
 
 **How to read this guide.** Anything marked **Verify** is something I could not confirm from here (a library, a price, a regulation, a shipping route). Check it before you spend money or build on it. Brand and product names are placeholders where the public name is not decided.
 
 ---
 
 ## 21. Bracelet Build Playbook
+
+> **Update:** there is now one bracelet quality for everyone, with a Java Card secure element in every unit. Where this section mentions Standard and Elite tiers, DESFire as the main chip, or Phase 6, Section 29 replaces it.
 
 ### 21.1 The principle
 
@@ -654,3 +657,172 @@ The driver's payout, the daily ticket and the fare engine are not affected. The 
 8. Admin reports and the daily check
 9. Terms text, consent record and website wording
 10. Pilot with a ceiling on exposure
+
+---
+
+## 29. Single-Tier Bracelet: Java Card in Every Bracelet
+
+### 29.1 The decision
+
+There is no premium tier. Every bracelet gets the same chip, the same applet, the same security and the same service. Only cosmetic editions (colorway, numbered runs) may differ, and they do not change price or protection.
+
+This replaces the Standard (DESFire) and Elite (Java Card) split in Section 2 of the original bracelet build guide and in Sections 7A and 21 of this guide. DESFire stays on the list only as a fallback and for a possible low-cost or phone-based credential later.
+
+Limits (daily and unsettled caps) are set by rider risk and history, not by product tier. A new rider starts low and the limit rises with a clean record (D18).
+
+### 29.2 What changes
+
+| Topic | Before (two tiers) | Now (Java Card for all) |
+|---|---|---|
+| Chip | DESFire EV3 for most, Java Card for Elite | Dual-interface Java Card secure element in every bracelet |
+| Keys | AES keys derived on your server | Each bracelet generates its own private key on the chip. It never leaves the chip |
+| What the server stores per bracelet | A way to derive its key | The bracelet's public key and certificate serial |
+| Server breach | Could expose how card keys are derived | Cannot reveal any bracelet's private key |
+| Tap protocol | Several network round trips relaying chip messages | A few messages between terminal and chip locally, then one network request |
+| Latency risk | High, because every chip message crossed the network | Much lower |
+| Random ID question | Open | Gone, because the card is identified by its certificate |
+| Offline | Not possible | Possible for identity checks, with limits (29.3) |
+| Applet | None | You need one, and it carries security risk |
+| Sourcing | Open distributor samples | Vendor NDAs, minimum orders, development cards |
+| Unit cost | Lower | Higher. Get quotes |
+| Review | Server code and provisioning | Also the applet, by an independent reviewer |
+
+### 29.3 Honest trade-offs
+
+1. **Unit cost.** Java Card inlays cost more than DESFire inlays. You sell each bracelet at ₦5,000 and recover it slowly through the instalment plan, so a higher unit cost raises your exposure (Section 28.3). Get written quotes at pilot and at 1,000-unit quantities before you fix the price.
+2. **Schedule.** You cannot start the pilot until the applet exists, has been tested and has been reviewed. Development cards with known default keys are for experiments only, never for riders.
+3. **The applet is the riskiest part of the project.** It holds the private key and does the signing. A bug there cannot be patched on bracelets already in riders' hands unless you built in a safe update path. Options for D16: write it in-house with an experienced Java Card reviewer, hire a contractor, or ask the chip vendor for a reference applet or platform you can adapt. Writing your own cryptographic applet from scratch is the highest-risk choice.
+4. **Offline does not remove the need for a network.** A terminal can check offline that a bracelet is genuine. But the fare still has to be collected through Moniepoint, and Section 5.8 says only a succeeded payment makes a fare successful. An offline tap that is approved and charged later is the "float" behavior decision D2 is about. For the MVP, treat taps as online-only (D17) and use the Java Card for its security and its short, fast exchange, not for offline approval.
+5. **Management keys still exist.** The private key on each bracelet is never on your server. But loading and updating applets uses GlobalPlatform management keys. Those must be protected too, and the card should be locked after provisioning so no one else can load applets.
+6. **Different antenna rules.** Dual-interface secure elements have their own antenna requirements, such as load capacitance and coil inductance. Read the chip's datasheet before you finish the coil design, and tune with the NanoVNA once the real chip is in the shell.
+
+### 29.4 Design
+
+**Card side (applet).** At minimum:
+- Select the applet
+- Return the card's certificate
+- Sign a challenge together with a counter, using the card's private key
+- Increase the counter on every signature, so a replayed signature is detectable
+- Never export the private key, and never accept a command that would let one be read
+
+Keep the applet small and the command set minimal. Every extra command is more surface to review.
+
+**Provisioning.**
+1. Authenticate to the blank card with its management keys
+2. Load the applet
+3. The applet generates the key pair on the chip
+4. Read the public key out
+5. Your certificate authority signs a certificate for that public key
+6. Write the certificate to the card
+7. Record the public key, certificate serial, chip model and applet version in the database
+8. Lock the card against further loading
+9. Register the credential as INACTIVE and ship it INACTIVE
+
+**Key custody.**
+- CA root key: kept offline, used rarely, with two-person control
+- Issuing (intermediate) key: in an HSM or cloud KMS, used by `cmd/provision` to sign certificates
+- Management keys: derived per card from a management master in KMS, kept separate from the CA keys
+- None of these ever sit in the repository, in logs, or on a terminal
+
+**Tap protocol (server verifies, one network request per tap).**
+1. While the ready screen is showing, the terminal asks `POST /tap/bracelet/challenge` and keeps a fresh single-use challenge ready. Doing this before the tap removes a network round trip from the moment the rider is waiting.
+2. On tap, the terminal talks to the chip locally: select the applet, read the certificate, send the challenge and terminal ID, and receive the signature and counter. This is three or so short exchanges.
+3. The terminal sends `POST /tap/bracelet/verify` with the certificate (or credential ID), the challenge ID, the signature and the counter.
+4. The server then:
+   - checks the certificate chain back to your CA
+   - finds the credential and checks its state is ACTIVE
+   - verifies the signature over challenge, terminal ID and counter
+   - checks the counter is higher than the last one it recorded, and stores the new one in the same transaction
+   - marks the challenge as used
+   - passes the verified credential to `tap_service`, which does the rest as before
+
+The challenge is short-lived and issued by the server, so a recorded tap cannot be replayed later. The counter adds a second check against cloning and replay.
+
+**Why this removes the relay-latency worry.** Before, a DESFire tap needed several network trips, each carrying a chip message. Now the only network call at tap time is `verify`, plus a challenge that was fetched ahead of time.
+
+### 29.5 Backend and schema changes
+
+- `credential`: add `public_key bytea`, `cert_serial text`, `last_counter bigint`. Keep `chip_uid` only if you decide to store it, and never return it to clients.
+- `bracelet`: remove `tier`. Add `chip_model`, `applet_version`, `provisioned_at`. Keep `edition` for cosmetic editions.
+- `credential` type values: `bracelet_javacard` for all bracelets. Keep `phone_hce` for later. `bracelet_desfire` stays reserved but unused for now.
+- New table for challenges: `tap_challenge (id, terminal_id, value, expires_at, used_at)`. Mark `used_at` in the same transaction as verification so a challenge cannot succeed twice.
+- Authenticator: the Java Card implementation can be a single call, for example `Verify(ctx, TapProof) (credentialID, error)`. The multi-step session shape in 7A.3 is no longer needed for the main path. Keep it only if a later credential type needs it.
+- Endpoints: replace `/tap/bracelet/start`, `/step`, `/finish` with `/tap/bracelet/challenge` and `/tap/bracelet/verify`.
+- Revocation: state lives on the server, so a BLOCKED credential is declined at `verify`. For any offline check later, terminals also hold a blocklist with sequence numbers.
+- Audit events: applet loaded, key generated, certificate issued, card locked, certificate revoked.
+
+### 29.6 Revised phases
+
+| Phase | Work | Gate |
+|---|---|---|
+| 0. Now, no hardware | Everything in 21.3, plus the schema in 29.5 and the challenge and verify endpoints against a fake chip | Fake bracelets tap, block and replay correctly in tests |
+| 1. Development kit | Java Card development cards, a PC/SC reader, the Java Card development kit and GlobalPlatformPro. Write a tiny applet that signs a challenge. Verify the signature in Go | Signature produced on a development card verifies on the server |
+| 2. Applet and CA | Full applet with counter. Certificate authority with HSM or KMS signing. `cmd/provision` writes certificates | A blank card becomes a registered, locked bracelet in one run |
+| 3. Terminal | Android app does challenge, local chip exchange and verify. Measure end-to-end tap time | Under about one second on a good connection, clear message on a bad one |
+| 4. Shell | Check the chip's antenna requirements, print with dummy inlay, tune and measure, then reprint with the real chip | Reliable reads on a wrist at the angles drivers see |
+| 5. Review | Independent review of the applet, provisioning, CA custody and server verification | Written findings addressed. This is a gate, not an optional step |
+| 6. Pilot | 10 to 20 bracelets with the instalment ceiling from Section 28 | A full operating day cash-free, no unexplained charge |
+
+Phase 1 can run in parallel with Phase 0 once you have a reader and development cards. If vendor onboarding takes weeks, keep Phase 0 moving and treat chip access as the thing to start chasing now.
+
+### 29.7 Threat model changes
+
+Update Section 22.1:
+
+- **Clone a bracelet:** now requires extracting a private key from a secure element. Much harder than copying data, but not impossible for a well-funded attacker. Keep per-rider limits.
+- **Master key leak:** the old "all bracelet keys derive from one master key" risk is gone for tap verification. The new crown jewels are the CA signing keys and the management keys.
+- **CA compromise:** an attacker could mint certificates for fake bracelets. Defense: HSM or KMS for the issuing key, an offline root, two-person control, and server-side registration so a valid certificate alone is not enough (the credential must also exist in your database and be ACTIVE).
+- **Applet bug:** the new risk with the largest consequence. Defense: minimal commands, independent review, and a planned update path.
+- **Supply chain:** buy chips only from authorized distributors, check each batch, and keep a record of chip serials.
+- **Rogue reader:** a generic reader can still select the applet and ask for a signature, but it cannot get a valid challenge from your server. Test this.
+
+### 29.8 Decisions
+
+| ID | Decision | Status |
+|---|---|---|
+| D14 | Single tier, Java Card in every bracelet | Decided |
+| D15 | Chip family and vendor (for example NXP JCOP or Infineon SECORA families), with quotes at pilot and scale quantities, and confirmation of contactless ECC support and antenna requirements | Open. Start the vendor conversations now |
+| D16 | Who writes and maintains the applet: in-house with expert review, contractor, or vendor-supplied | Open |
+| D17 | Offline taps | Online-only for the MVP. Revisit with D2 |
+| D18 | Default limits policy by rider history, not product tier | Open |
+
+Remove tier-based rows from any earlier table in the guide. Add these rows to Section 20.
+
+### 29.9 Changes to other sections
+
+| Section | Change |
+|---|---|
+| Bracelet guide, tier table | Superseded. One tier |
+| 7A.1, 7A.2, 7A.3, 7A.4 | Replaced by 29.4 and 29.5 |
+| 7A.5 risks | Replace the DESFire library and Random ID rows with applet, CA custody and vendor access |
+| 14.5 rate limits | Limits now apply to `challenge` and `verify`. `challenge` is the one an attacker would flood |
+| 21.2 to 21.6 | Replaced by 29.6 and the provisioning flow in 29.4 |
+| 22 | Update as in 29.7 |
+| 24.2 terminal app | Prefetch a challenge while ready. Do chip exchange locally. One verify call per tap |
+| 25 website | No tier page. Show colorways and editions. Do not describe the security more strongly than the review supports |
+| 26 | Java Card moves from "later" to core study (29.10) |
+| 28 | Unit cost and exposure use the Java Card cost |
+
+### 29.10 Knowledge to add
+
+- **Java Card platform:** Oracle's Java Card specifications and development kit. Learn applets, APDU handling, transactions and atomicity, memory limits.
+- **GlobalPlatform:** card lifecycle (loading, locking), secure channels, management keys. Use GlobalPlatformPro to experiment.
+- **ECDSA on P-256:** key generation, signing, verification in Go (the standard library covers it).
+- **Certificates:** X.509 or a compact certificate format that fits the card's memory, certificate chains, revocation.
+- **HSM and KMS signing:** how to sign certificates without ever exporting the key, access control, audit.
+- **Secure applet practices:** keep the command set tiny, validate every input length, avoid timing differences, test failure paths such as power loss mid-write. Ask your reviewer for their checklist before you start.
+- **Vendor documentation:** chip datasheets, antenna design notes and the vendor's developer program, once you have NDA access.
+- **Books and references:** *Smart Card Handbook* (Rankl and Effing) and *Serious Cryptography* (Aumasson) from Section 26 still apply. **Verify** a current Java Card textbook with the vendor or reviewer, since some older ones predate current versions.
+
+### 29.11 Build order
+
+1. Start the vendor and distributor conversations (D15). This has the longest wait
+2. Decide D16, D17, D18
+3. Schema and endpoints from 29.5 against a fake chip
+4. Development cards, reader and the tiny signing applet (Phase 1)
+5. Go verification of a real chip's signature
+6. CA design with HSM or KMS signing, then `cmd/provision`
+7. Full applet with counter, then the terminal app
+8. Shell, coil and antenna work with the real chip
+9. Independent review
+10. Pilot
