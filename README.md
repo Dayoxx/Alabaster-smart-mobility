@@ -145,5 +145,3 @@ The implementation will continue to evolve as development progresses.
 License
 
 This project is currently under development.
-
-This is the level of detail I'd keep **public**. It tells someone what ASM is and how to run it, but doesn't expose the internal roadmap, transaction architecture, security decisions, future infrastructure, or detailed business logic.
