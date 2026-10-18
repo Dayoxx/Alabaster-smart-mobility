@@ -122,7 +122,7 @@ Configure the Database
 
 Set the database connection:
 
-$env:DATABASE_URL="postgres://USER:PASSWORD@localhost:5433/transportation_model?sslmode=disable"
+$env:DATABASE_URL="postgres://USER:PASSWORD@localhost:8000/********?sslmode=disable"
 Install Dependencies
 go mod tidy
 Build
